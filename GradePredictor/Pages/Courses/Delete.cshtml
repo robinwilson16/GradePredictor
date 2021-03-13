@@ -1,0 +1,118 @@
+﻿@page
+@model GradePredictor.Pages.Courses.DeleteModel
+
+@{
+    ViewData["Title"] = "Delete";
+}
+
+<h1>Delete</h1>
+
+<h3>Are you sure you want to delete this?</h3>
+<div>
+    <h4>Course</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Course.CourseCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Course.CourseCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Course.CourseTitle)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Course.CourseTitle)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Course.GroupCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Course.GroupCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Course.MainLecturerCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Course.MainLecturerCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Course.MainLecturerSurname)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Course.MainLecturerSurname)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Course.MainLecturerForename)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Course.MainLecturerForename)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Course.AttendPossible)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Course.AttendPossible)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Course.AttendPresent)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Course.AttendPresent)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Course.AttendPer)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Course.AttendPer)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Course.ContEnrols)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Course.ContEnrols)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Course.PredictionsCompletedNum)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Course.PredictionsCompletedNum)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Course.PredictionsCompletedPer)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Course.PredictionsCompletedPer)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Course.PredictedToAchieveNum)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Course.PredictedToAchieveNum)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Course.PredictedToAchievePer)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Course.PredictedToAchievePer)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Course.PredictedToAchieveHighNum)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Course.PredictedToAchieveHighNum)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Course.PredictedToAchieveHighPer)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Course.PredictedToAchieveHighPer)
+        </dd>
+    </dl>
+    
+    <form method="post">
+        <input type="hidden" asp-for="Course.CourseID" />
+        <input type="submit" value="Delete" class="btn btn-danger" /> |
+        <a asp-page="./Index">Back to List</a>
+    </form>
+</div>

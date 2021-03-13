@@ -1,0 +1,124 @@
+﻿@using System.DirectoryServices.AccountManagement;
+@using GradePredictor.Models
+@using Microsoft.Extensions.Options
+@using GradePredictor.Shared
+
+@inject GradePredictor.Data.ApplicationDbContext _context
+@inject IOptions<SystemSettings> ApplicationSettings
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - GradePredictor</title>
+
+    <link rel="stylesheet" href="~/lib/twitter-bootstrap/css/bootstrap.min.css" asp-append-version="true">
+    <link rel="stylesheet" href="~/lib/font-awesome/css/all.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/datatables/css/dataTables.bootstrap4.min.css" asp-append-version="true">
+    <link rel="stylesheet" href="//cdn.datatables.net/buttons/1.6.4/css/buttons.bootstrap4.min.css" asp-append-version="true">
+    <link rel="stylesheet" href="//cdn.datatables.net/scroller/2.0.3/css/scroller.bootstrap4.min.css" asp-append-version="true">
+    <link rel="stylesheet" href="~/lib/ekko-lightbox/ekko-lightbox.css" asp-append-version="true">
+
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" asp-area="" asp-page="/Index">
+                <img class="NavLogo" src="~/images/WestLondonCollegeLogo.png" alt="West London College" />
+                <i class="fas fa-graduation-cap"></i> Grade Predictor @@ West London College
+            </a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                    aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="navbar-collapse collapse d-sm-inline-flex flex-sm-row-reverse">
+                <p class="nav navbar-text navbar-right">@ApplicationSettings.Value.Greeting, <i class="fas fa-user"></i> @AccountName()</p>
+                <ul class="navbar-nav mr-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" asp-page="/Index"><i class="fas fa-home"></i> Home</a>
+                    </li>
+
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="HelpDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="fas fa-question-circle"></i> Help
+                        </a>
+                        <div class="dropdown-menu" aria-labelledby="HelpDropdown">
+                            <a class="dropdown-item" href="#" id="ChangelogLink"><i class="fas fa-pencil-alt"></i> Changelog</a>
+                            <a class="dropdown-item" href="https://github.com/robinwilson16/WLCProgressions/issues" target="_blank" rel="noopener"><i class="fas fa-bug"></i> Issues?</a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="#" id="AboutSystemLink"><i class="fas fa-question-circle"></i> About</a>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <div class="body-content">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="fixed-bottom bg-light">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col">
+                    <span class="text-muted">
+                        <i class="far fa-copyright"></i> 2021 West London College
+                    </span>
+                </div>
+                <div class="col text-right">
+                    <span class="text-muted">Grade Predictor @ApplicationSettings.Value.Version</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js" asp-append-version="true"></script>
+    <script src="~/lib/twitter-bootstrap/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
+    <script src="~/lib/momentjs/moment-with-locales.min.js" asp-append-version="true"></script>
+    <script src="~/lib/datatables/js/jquery.dataTables.min.js" asp-append-version="true"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jszip/3.5.0/jszip.min.js" asp-append-version="true"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.70/pdfmake.min.js" asp-append-version="true"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.70/vfs_fonts.min.js" asp-append-version="true"></script>
+    <script src="//cdn.datatables.net/plug-ins/1.10.22/sorting/datetime-moment.js" asp-append-version="true"></script>
+    <script src="//cdn.datatables.net/plug-ins/1.10.22/api/order.neutral().js" asp-append-version="true"></script>
+    <script src="//cdn.datatables.net/buttons/1.6.4/js/dataTables.buttons.min.js" asp-append-version="true"></script>
+    <script src="//cdn.datatables.net/buttons/1.6.4/js/buttons.bootstrap.min.js" asp-append-version="true"></script>
+    <script src="//cdn.datatables.net/buttons/1.6.4/js/buttons.html5.min.js" asp-append-version="true"></script>
+    <script src="//cdn.datatables.net/buttons/1.6.4/js/buttons.colVis.min.js" asp-append-version="true"></script>
+    <script src="//cdn.datatables.net/buttons/1.6.4/js/buttons.print.min.js" asp-append-version="true"></script>
+    <script src="//cdn.datatables.net/colreorder/1.5.3/js/dataTables.colReorder.min.js" asp-append-version="true"></script>
+    <script src="//cdn.datatables.net/responsive/2.2.7/js/dataTables.responsive.min.js" asp-append-version="true"></script>
+    <script src="//cdn.datatables.net/scroller/2.0.3/js/dataTables.scroller.min.js" asp-append-version="true"></script>
+    <script src="~/lib/datatables/js/dataTables.bootstrap4.min.js" asp-append-version="true"></script>
+    <script src="~/lib/marked/marked.min.js" asp-append-version="true"></script>
+    <script src="~/lib/ekko-lightbox/ekko-lightbox.min.js" asp-append-version="true"></script>
+    <script src="~/lib/ScrollMagic/ScrollMagic.min.js" asp-append-version="true"></script>
+
+    <environment include="Development">
+        <script src="~/lib/ScrollMagic/plugins/debug.addIndicators.js" asp-append-version="true"></script>
+    </environment>
+
+    <script src="~/js/modalActions.js" asp-append-version="true"></script>
+    <script src="~/js/modals.js" asp-append-version="true"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
+
+@{
+    string AccountName()
+    {
+        using (var context = new PrincipalContext(ContextType.Domain))
+        {
+            var principal = UserPrincipal.FindByIdentity(context, User.Identity.Name);
+            return principal.GivenName + " " + principal.Surname;
+        }
+    }
+
+}

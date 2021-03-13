@@ -1,0 +1,133 @@
+﻿@page
+@model GradePredictor.Pages.CollegeStructures.DetailsModel
+
+@{
+    ViewData["Title"] = "Details";
+}
+
+<h1>Details</h1>
+
+<div>
+    <h4>CollegeStructure</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CollegeStructure.CollegeStructureCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CollegeStructure.CollegeStructureCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CollegeStructure.CollegeStructureName)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CollegeStructure.CollegeStructureName)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CollegeStructure.CollegeStructureLevel)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CollegeStructure.CollegeStructureLevel)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CollegeStructure.CollegeCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CollegeStructure.CollegeCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CollegeStructure.CollegeName)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CollegeStructure.CollegeName)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CollegeStructure.FacCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CollegeStructure.FacCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CollegeStructure.FacName)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CollegeStructure.FacName)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CollegeStructure.TeamCode)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CollegeStructure.TeamCode)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CollegeStructure.TeamName)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CollegeStructure.TeamName)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CollegeStructure.AttendPossible)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CollegeStructure.AttendPossible)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CollegeStructure.AttendPresent)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CollegeStructure.AttendPresent)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CollegeStructure.AttendPer)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CollegeStructure.AttendPer)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CollegeStructure.ContEnrols)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CollegeStructure.ContEnrols)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CollegeStructure.PredictionsCompletedNum)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CollegeStructure.PredictionsCompletedNum)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CollegeStructure.PredictionsCompletedPer)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CollegeStructure.PredictionsCompletedPer)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CollegeStructure.PredictedToAchieveNum)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CollegeStructure.PredictedToAchieveNum)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CollegeStructure.PredictedToAchievePer)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CollegeStructure.PredictedToAchievePer)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CollegeStructure.PredictedToAchieveHighNum)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CollegeStructure.PredictedToAchieveHighNum)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.CollegeStructure.PredictedToAchieveHighPer)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.CollegeStructure.PredictedToAchieveHighPer)
+        </dd>
+    </dl>
+</div>
+<div>
+    <a asp-page="./Edit" asp-route-id="@Model.CollegeStructure.CollegeStructureID">Edit</a> |
+    <a asp-page="./Index">Back to List</a>
+</div>

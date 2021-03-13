@@ -1,0 +1,241 @@
+CREATE PROCEDURE [dbo].[SPR_GPR_SelectListData]
+    @AcademicYear NVARCHAR(5),
+    @Domain NVARCHAR(255)
+AS
+BEGIN
+	SET XACT_ABORT, NOCOUNT ON;
+
+	--DECLARE @Domain NVARCHAR(255) = 'ACADEMIC_YEAR'
+
+    DECLARE @SQLString NVARCHAR(MAX);
+    DECLARE @SQLParams NVARCHAR(MAX);
+
+    IF @Domain = 'ACADEMIC_YEAR'
+        SELECT
+            Code = AY.AcademicYearID,
+            Description = AY.AcademicYearID
+        FROM ProSolution.dbo.AcademicYear AY
+        WHERE
+            AY.Enabled = 1
+        ORDER BY
+            AY.AcademicYearID
+	ELSE IF @Domain = 'PREDICTED_GCSE_GRADE'
+        SELECT
+			Code = '',
+			Description = '-- None --'
+
+		UNION ALL
+
+		SELECT
+			Code = RTRIM ( GRA.Grade ),
+			Description = RTRIM ( GRA.Grade )
+		FROM ProSolution.dbo.Grade GRA
+		WHERE
+			GRA.Enabled = 1
+			AND (
+				(
+					GRA.Grade >= '1'
+					AND GRA.Grade <= '9'
+					AND LEN ( GRA.Grade ) = 1
+				) 
+				OR GRA.Grade = 'U'
+			)
+
+		ORDER BY
+			Description
+	ELSE IF @Domain = 'PREDICTED_GCSE_DOUBLE_GRADE'
+        SELECT
+			Code = '',
+			Description = '-- None --'
+
+		UNION ALL
+
+		SELECT
+			Code = RTRIM ( GRA.Grade ),
+			Description = RTRIM ( GRA.Grade )
+		FROM ProSolution.dbo.Grade GRA
+		WHERE
+			GRA.Enabled = 1
+			AND (
+				(
+					GRA.Grade >= '1'
+					AND GRA.Grade <= '9'
+					AND LEN ( GRA.Grade ) = 3
+				) 
+				OR GRA.Grade = 'U'
+			)
+
+		ORDER BY
+			Description
+	ELSE IF @Domain = 'PREDICTED_ALEVEL_GRADE'
+        SELECT
+			Code = '',
+			Description = '-- None --'
+
+		UNION ALL
+
+		SELECT
+			Code = RTRIM ( GRA.Grade ),
+			Description = RTRIM ( GRA.Grade )
+		FROM ProSolution.dbo.Grade GRA
+		WHERE
+			GRA.Enabled = 1
+			AND (
+				(
+					GRA.Grade >= 'A'
+					AND GRA.Grade <= 'E'
+					AND LEN ( GRA.Grade ) = 1
+				) 
+				OR GRA.Grade IN ( 'A*', 'U' )
+			)
+
+		ORDER BY
+			Description
+	ELSE IF @Domain = 'PREDICTED_ALEVEL_DOUBLE_GRADE'
+        SELECT
+			Code = '',
+			Description = '-- None --'
+
+		UNION ALL
+
+		SELECT
+			Code = RTRIM ( GRA.Grade ),
+			Description = RTRIM ( GRA.Grade )
+		FROM ProSolution.dbo.Grade GRA
+		WHERE
+			GRA.Enabled = 1
+			AND (
+				(
+					GRA.Grade >= 'AA'
+					AND GRA.Grade <= 'EE'
+					AND LEN ( GRA.Grade ) = 2
+				)
+				OR GRA.Grade = 'U'
+			)
+			AND GRA.Grade NOT IN ( 
+				'CR',
+				'DM',
+				'DS'
+			)
+
+		ORDER BY
+			Description
+	ELSE IF @Domain = 'PREDICTED_FUNCTIONAL_SKILL_GRADE'
+        SELECT
+			Code = '',
+			Description = '-- None --'
+
+		UNION ALL
+
+		SELECT
+			Code = RTRIM ( GRA.Grade ),
+			Description = RTRIM ( GRA.Grade )
+		FROM ProSolution.dbo.Grade GRA
+		WHERE
+			GRA.Enabled = 1
+			AND (
+				GRA.Grade LIKE 'EL%'
+				OR GRA.Grade LIKE 'L%'
+				OR GRA.Grade = 'PA'
+				OR GRA.Grade = 'FL'
+			)
+
+		ORDER BY
+			Description
+	ELSE IF @Domain = 'PREDICTED_VOCATIONAL_GRADE'
+        SELECT
+			Code = '',
+			Description = '-- None --'
+
+		UNION ALL
+
+		SELECT
+			Code = RTRIM ( GRA.Grade ),
+			Description = RTRIM ( GRA.Grade )
+		FROM ProSolution.dbo.Grade GRA
+		WHERE
+			GRA.Enabled = 1
+			AND (
+				(
+					GRA.Grade >= 'D'
+					AND GRA.Grade <= 'PPP'
+					AND GRA.Grade NOT LIKE 'E%'
+					AND GRA.Grade NOT LIKE 'F%'
+					AND GRA.Grade NOT LIKE 'G%'
+					AND GRA.Grade NOT LIKE 'L%'
+					AND GRA.Grade NOT LIKE 'N%'
+					AND GRA.Grade NOT LIKE 'O%'
+				)
+				OR GRA.Grade = 'FL'
+			)
+
+		ORDER BY
+			Description
+	ELSE IF @Domain = 'PREDICTED_GRADE'
+        SELECT
+			Code = '',
+			Description = '-- None --'
+
+		UNION ALL
+
+		SELECT
+			Code = RTRIM ( GRA.Grade ),
+			Description = RTRIM ( GRA.Grade )
+		FROM ProSolution.dbo.Grade GRA
+		WHERE
+			GRA.Enabled = 1
+
+		ORDER BY
+			Description
+	ELSE IF @Domain = 'PREDICTED_TO_ACHIEVE_BY'
+        SELECT 
+			Code = '',
+			Description = '-- Unknown --'
+
+		UNION ALL
+
+		SELECT 
+			Code = '1',
+			Description = 'Within 90 Days of Exp End (Timely Ach)'
+
+		UNION ALL
+
+		SELECT 
+			Code = '2',
+			Description = '> 90 Days Past Exp End within Same Acc Yr (Overall Ach)'
+
+		UNION ALL
+
+		SELECT 
+			Code = '3',
+			Description = 'In a Future Acc Yr (Overall Exc.)'
+
+		ORDER BY
+			Code
+	ELSE IF @Domain = 'YES_NO'
+        SELECT 
+			Code = '',
+			Description = '--',
+			SortOrder = 1
+
+		UNION ALL
+
+		SELECT 
+			Code = 'Y',
+			Description = 'Yes',
+			SortOrder = 2
+
+		UNION ALL
+
+		SELECT 
+			Code = 'N',
+			Description = 'No',
+			SortOrder = 3
+
+		ORDER BY
+			SortOrder
+	ELSE
+        SELECT
+			Code = '',
+			Description = '-- ERROR --'
+END

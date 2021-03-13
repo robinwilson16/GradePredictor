@@ -1,0 +1,110 @@
+CREATE PROCEDURE [dbo].[SPR_GPR_UpdateEnrolment]
+	@AcademicYear NVARCHAR(5),
+	@EnrolmentID INT,
+	@PredictedToAchieve BIT,
+	@PredictedToAchieveBy INT,
+	@PredictedGrade NVARCHAR(255),
+	@Comment NVARCHAR(255),
+	@CreatedBy NVARCHAR(255),
+	@CreatedDate DATETIME
+AS
+BEGIN
+	SET XACT_ABORT, NOCOUNT ON;
+
+	--DECLARE @AcademicYear VARCHAR(5) = '20/21'
+	--DECLARE @EnrolmentID INT = 351412
+	--DECLARE @PredictedToAchieve BIT = 1
+	--DECLARE @PredictedToAchieveBy INT = 1
+	--DECLARE @PredictedGrade NVARCHAR(255) = 'C'
+	--DECLARE @Comment NVARCHAR(255) = 'TEST'
+	--DECLARE @CreatedBy NVARCHAR(255) = 'r.wilson1'
+	--DECLARE @CreatedDate DATETIME = GETDATE()
+
+
+	DECLARE @PredictedToAchieveYN CHAR(1) = NULL
+
+	IF @PredictedToAchieve = 1
+		SET @PredictedToAchieveYN = 'Y'
+	ELSE IF @PredictedToAchieve = 0
+		SET @PredictedToAchieveYN = 'N'
+
+	--Get existing values for audit trail comparison later
+	DROP TABLE IF EXISTS #ExistingValues
+	SELECT
+		ENR.EnrolmentID,
+		ENR.UserDefined20,
+		ENR.UserDefined21,
+		ENR.UserDefined25,
+		ENR.UserDefined24,
+		ENR.UserDefined22,
+		ENR.UserDefined23
+		INTO #ExistingValues
+	FROM ProSolution.dbo.Enrolment ENR
+	WHERE
+		ENR.EnrolmentID = @EnrolmentID
+
+	UPDATE ENR
+	SET
+		ENR.UserDefined20 = @PredictedToAchieveYN,
+		ENR.UserDefined21 = @PredictedToAchieveBy,
+		ENR.UserDefined25 = @PredictedGrade,
+		ENR.UserDefined24 = @Comment,
+		ENR.UserDefined22 = @CreatedBy,
+		ENR.UserDefined23 = FORMAT ( @CreatedDate, 'dd/MM/yyyy HH:mm:ss' )
+	FROM ProSolution.dbo.StudentDetail SD
+	INNER JOIN ProSolution.dbo.Enrolment ENR
+		ON ENR.studentDetailID = SD.StudentDetailID
+	WHERE
+		SD.AcademicYearID = @AcademicYear
+		AND ENR.EnrolmentID = @EnrolmentID
+
+	--Now insert and audit trail record
+	INSERT INTO ProSolution.dbo._CCC_AuditTrail
+	(
+		TableName,
+		WhereClause,
+		RowDescription,
+		ChangeInfo,
+		ChangeType,
+		ModifiedBy,
+		ModifiedOn,
+		Context,
+		ProductName
+	)
+	SELECT
+		TableName = 'Enrolment',
+		WhereClause = '[EnrolmentID] = ' + CAST ( @EnrolmentID AS VARCHAR(50) ),
+		RowDescription = CRS.Code + ', ' + SD.Surname + ', ' + SD.FirstForename + ' (' + RTRIM ( SD.RefNo ) + ')',
+		ChangeInfo = 
+			'Record Updated:'
+			+ CASE
+				WHEN COALESCE ( ENR.UserDefined20, '' ) = COALESCE ( EV.UserDefined20, '' ) THEN ''
+				ELSE ' UserDefined20: Changed from ''' + COALESCE ( EV.UserDefined20, '' ) + ''' to ''' + CAST ( COALESCE ( ENR.UserDefined20, '' ) AS VARCHAR(50) ) + ''''
+			END
+			+ CASE
+				WHEN COALESCE ( ENR.UserDefined21, '' ) = COALESCE ( EV.UserDefined21, '' ) THEN ''
+				ELSE ' UserDefined21: Changed from ''' + COALESCE ( EV.UserDefined21, '' ) + ''' to ''' + CAST ( COALESCE ( ENR.UserDefined21, '' ) AS VARCHAR(50) ) + ''''
+			END
+			+ CASE
+				WHEN COALESCE ( ENR.UserDefined25, '' ) = COALESCE ( EV.UserDefined25, '' ) THEN ''
+				ELSE ' UserDefined25: Changed from ''' + COALESCE ( EV.UserDefined25, '' ) + ''' to ''' + CAST ( COALESCE ( ENR.UserDefined25, '' ) AS VARCHAR(50) ) + ''''
+			END
+			+ CASE
+				WHEN COALESCE ( ENR.UserDefined24, '' ) = COALESCE ( EV.UserDefined24, '' ) THEN ''
+				ELSE ' UserDefined24: Changed from ''' + COALESCE ( EV.UserDefined24, '' ) + ''' to ''' + CAST ( COALESCE ( ENR.UserDefined24, '' ) AS VARCHAR(50) ) + ''''
+			END,
+		ChangeType = 2,
+		ModifiedBy = @CreatedBy,
+		ModifiedOn = @CreatedDate,
+		Context = 'Grade Predictor',
+		ProductName = 'Grade Predictor'
+	FROM ProSolution.dbo.Enrolment ENR
+	INNER JOIN ProSolution.dbo.StudentDetail SD
+		ON SD.StudentDetailID = ENR.StudentDetailID
+	INNER JOIN ProSolution.dbo.Offering CRS
+		ON CRS.OfferingID = ENR.OfferingID
+	INNER JOIN #ExistingValues EV
+		ON EV.EnrolmentID = ENR.EnrolmentID
+	WHERE
+		ENR.EnrolmentID = @EnrolmentID
+END

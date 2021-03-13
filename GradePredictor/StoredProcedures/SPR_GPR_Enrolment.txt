@@ -1,0 +1,33 @@
+CREATE PROCEDURE [dbo].[SPR_GPR_Enrolment]
+	@AcademicYear NVARCHAR(5),
+	@EnrolmentID INT
+AS
+BEGIN
+	SET XACT_ABORT, NOCOUNT ON;
+
+	--DECLARE @AcademicYear VARCHAR(5) = '20/21'
+	--DECLARE @EnrolmentID INT = 351412
+
+	SELECT
+		EnrolmentID = ENR.EnrolmentID,
+		AcademicYearID = SD.AcademicYearID,
+		PredictedToAchieve = 
+			TRY_CAST ( 
+				CASE
+					WHEN ENR.UserDefined20 = 'Y' THEN 1
+					WHEN ENR.UserDefined20 = 'N' THEN 0
+					ELSE ENR.UserDefined20
+				END
+			AS BIT ),
+		PredictedToAchieveBy = TRY_CAST ( ENR.UserDefined21 AS INT ),
+		PredictedGrade = ENR.UserDefined25,
+		Comment = ENR.UserDefined24,
+		CreatedBy = ENR.UserDefined22,
+		CreatedDate  = TRY_CAST ( ENR.UserDefined23 AS DATETIME )
+	FROM ProSolution.dbo.StudentDetail SD
+	INNER JOIN ProSolution.dbo.Enrolment ENR
+		ON ENR.studentDetailID = SD.StudentDetailID
+	WHERE
+		SD.AcademicYearID = @AcademicYear
+		AND ENR.EnrolmentID = @EnrolmentID
+END

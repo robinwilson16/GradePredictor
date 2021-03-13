@@ -1,0 +1,110 @@
+﻿@page
+@model GradePredictor.Pages.Courses.EditModel
+
+@{
+    ViewData["Title"] = "Edit";
+}
+
+<h1>Edit</h1>
+
+<h4>Course</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input type="hidden" asp-for="Course.CourseID" />
+            <div class="form-group">
+                <label asp-for="Course.CourseCode" class="control-label"></label>
+                <input asp-for="Course.CourseCode" class="form-control" />
+                <span asp-validation-for="Course.CourseCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Course.CourseTitle" class="control-label"></label>
+                <input asp-for="Course.CourseTitle" class="form-control" />
+                <span asp-validation-for="Course.CourseTitle" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Course.GroupCode" class="control-label"></label>
+                <input asp-for="Course.GroupCode" class="form-control" />
+                <span asp-validation-for="Course.GroupCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Course.MainLecturerCode" class="control-label"></label>
+                <input asp-for="Course.MainLecturerCode" class="form-control" />
+                <span asp-validation-for="Course.MainLecturerCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Course.MainLecturerSurname" class="control-label"></label>
+                <input asp-for="Course.MainLecturerSurname" class="form-control" />
+                <span asp-validation-for="Course.MainLecturerSurname" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Course.MainLecturerForename" class="control-label"></label>
+                <input asp-for="Course.MainLecturerForename" class="form-control" />
+                <span asp-validation-for="Course.MainLecturerForename" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Course.AttendPossible" class="control-label"></label>
+                <input asp-for="Course.AttendPossible" class="form-control" />
+                <span asp-validation-for="Course.AttendPossible" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Course.AttendPresent" class="control-label"></label>
+                <input asp-for="Course.AttendPresent" class="form-control" />
+                <span asp-validation-for="Course.AttendPresent" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Course.AttendPer" class="control-label"></label>
+                <input asp-for="Course.AttendPer" class="form-control" />
+                <span asp-validation-for="Course.AttendPer" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Course.ContEnrols" class="control-label"></label>
+                <input asp-for="Course.ContEnrols" class="form-control" />
+                <span asp-validation-for="Course.ContEnrols" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Course.PredictionsCompletedNum" class="control-label"></label>
+                <input asp-for="Course.PredictionsCompletedNum" class="form-control" />
+                <span asp-validation-for="Course.PredictionsCompletedNum" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Course.PredictionsCompletedPer" class="control-label"></label>
+                <input asp-for="Course.PredictionsCompletedPer" class="form-control" />
+                <span asp-validation-for="Course.PredictionsCompletedPer" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Course.PredictedToAchieveNum" class="control-label"></label>
+                <input asp-for="Course.PredictedToAchieveNum" class="form-control" />
+                <span asp-validation-for="Course.PredictedToAchieveNum" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Course.PredictedToAchievePer" class="control-label"></label>
+                <input asp-for="Course.PredictedToAchievePer" class="form-control" />
+                <span asp-validation-for="Course.PredictedToAchievePer" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Course.PredictedToAchieveHighNum" class="control-label"></label>
+                <input asp-for="Course.PredictedToAchieveHighNum" class="form-control" />
+                <span asp-validation-for="Course.PredictedToAchieveHighNum" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Course.PredictedToAchieveHighPer" class="control-label"></label>
+                <input asp-for="Course.PredictedToAchieveHighPer" class="form-control" />
+                <span asp-validation-for="Course.PredictedToAchieveHighPer" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <input type="submit" value="Save" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-page="./Index">Back to List</a>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

@@ -1,0 +1,124 @@
+﻿@page
+@model GradePredictor.Pages.CollegeStructures.CreateModel
+
+@{
+    ViewData["Title"] = "Create";
+}
+
+<h1>Create</h1>
+
+<h4>CollegeStructure</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="CollegeStructure.CollegeStructureCode" class="control-label"></label>
+                <input asp-for="CollegeStructure.CollegeStructureCode" class="form-control" />
+                <span asp-validation-for="CollegeStructure.CollegeStructureCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CollegeStructure.CollegeStructureName" class="control-label"></label>
+                <input asp-for="CollegeStructure.CollegeStructureName" class="form-control" />
+                <span asp-validation-for="CollegeStructure.CollegeStructureName" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CollegeStructure.CollegeStructureLevel" class="control-label"></label>
+                <input asp-for="CollegeStructure.CollegeStructureLevel" class="form-control" />
+                <span asp-validation-for="CollegeStructure.CollegeStructureLevel" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CollegeStructure.CollegeCode" class="control-label"></label>
+                <input asp-for="CollegeStructure.CollegeCode" class="form-control" />
+                <span asp-validation-for="CollegeStructure.CollegeCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CollegeStructure.CollegeName" class="control-label"></label>
+                <input asp-for="CollegeStructure.CollegeName" class="form-control" />
+                <span asp-validation-for="CollegeStructure.CollegeName" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CollegeStructure.FacCode" class="control-label"></label>
+                <input asp-for="CollegeStructure.FacCode" class="form-control" />
+                <span asp-validation-for="CollegeStructure.FacCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CollegeStructure.FacName" class="control-label"></label>
+                <input asp-for="CollegeStructure.FacName" class="form-control" />
+                <span asp-validation-for="CollegeStructure.FacName" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CollegeStructure.TeamCode" class="control-label"></label>
+                <input asp-for="CollegeStructure.TeamCode" class="form-control" />
+                <span asp-validation-for="CollegeStructure.TeamCode" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CollegeStructure.TeamName" class="control-label"></label>
+                <input asp-for="CollegeStructure.TeamName" class="form-control" />
+                <span asp-validation-for="CollegeStructure.TeamName" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CollegeStructure.AttendPossible" class="control-label"></label>
+                <input asp-for="CollegeStructure.AttendPossible" class="form-control" />
+                <span asp-validation-for="CollegeStructure.AttendPossible" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CollegeStructure.AttendPresent" class="control-label"></label>
+                <input asp-for="CollegeStructure.AttendPresent" class="form-control" />
+                <span asp-validation-for="CollegeStructure.AttendPresent" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CollegeStructure.AttendPer" class="control-label"></label>
+                <input asp-for="CollegeStructure.AttendPer" class="form-control" />
+                <span asp-validation-for="CollegeStructure.AttendPer" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CollegeStructure.ContEnrols" class="control-label"></label>
+                <input asp-for="CollegeStructure.ContEnrols" class="form-control" />
+                <span asp-validation-for="CollegeStructure.ContEnrols" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CollegeStructure.PredictionsCompletedNum" class="control-label"></label>
+                <input asp-for="CollegeStructure.PredictionsCompletedNum" class="form-control" />
+                <span asp-validation-for="CollegeStructure.PredictionsCompletedNum" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CollegeStructure.PredictionsCompletedPer" class="control-label"></label>
+                <input asp-for="CollegeStructure.PredictionsCompletedPer" class="form-control" />
+                <span asp-validation-for="CollegeStructure.PredictionsCompletedPer" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CollegeStructure.PredictedToAchieveNum" class="control-label"></label>
+                <input asp-for="CollegeStructure.PredictedToAchieveNum" class="form-control" />
+                <span asp-validation-for="CollegeStructure.PredictedToAchieveNum" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CollegeStructure.PredictedToAchievePer" class="control-label"></label>
+                <input asp-for="CollegeStructure.PredictedToAchievePer" class="form-control" />
+                <span asp-validation-for="CollegeStructure.PredictedToAchievePer" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CollegeStructure.PredictedToAchieveHighNum" class="control-label"></label>
+                <input asp-for="CollegeStructure.PredictedToAchieveHighNum" class="form-control" />
+                <span asp-validation-for="CollegeStructure.PredictedToAchieveHighNum" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CollegeStructure.PredictedToAchieveHighPer" class="control-label"></label>
+                <input asp-for="CollegeStructure.PredictedToAchieveHighPer" class="form-control" />
+                <span asp-validation-for="CollegeStructure.PredictedToAchieveHighPer" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <input type="submit" value="Create" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-page="Index">Back to List</a>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

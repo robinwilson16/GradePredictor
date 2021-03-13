@@ -1,0 +1,66 @@
+﻿@page
+@model GradePredictor.Pages.Enrolments.IndexModel
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Index</h1>
+
+<p>
+    <a asp-page="Create">Create New</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Enrolment[0].PredictedToAchieve)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Enrolment[0].PredictedToAchieveBy)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Enrolment[0].PredictedGrade)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Enrolment[0].Comment)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Enrolment[0].CreatedBy)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Enrolment[0].CreatedDate)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model.Enrolment) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.PredictedToAchieve)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.PredictedToAchieveBy)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.PredictedGrade)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Comment)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.CreatedBy)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.CreatedDate)
+            </td>
+            <td>
+                <a asp-page="./Edit" asp-route-id="@item.EnrolmentID">Edit</a> |
+                <a asp-page="./Details" asp-route-id="@item.EnrolmentID">Details</a> |
+                <a asp-page="./Delete" asp-route-id="@item.EnrolmentID">Delete</a>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>

@@ -1,0 +1,126 @@
+﻿@page "{academicYear}/{username}"
+@model GradePredictor.Pages.Courses.IndexModel
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Index</h1>
+
+<p>
+    <a asp-page="Create">Create New</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Course[0].CourseCode)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Course[0].CourseTitle)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Course[0].GroupCode)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Course[0].MainLecturerCode)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Course[0].MainLecturerSurname)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Course[0].MainLecturerForename)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Course[0].AttendPossible)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Course[0].AttendPresent)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Course[0].AttendPer)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Course[0].ContEnrols)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Course[0].PredictionsCompletedNum)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Course[0].PredictionsCompletedPer)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Course[0].PredictedToAchieveNum)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Course[0].PredictedToAchievePer)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Course[0].PredictedToAchieveHighNum)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Course[0].PredictedToAchieveHighPer)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model.Course) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.CourseCode)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.CourseTitle)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.GroupCode)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.MainLecturerCode)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.MainLecturerSurname)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.MainLecturerForename)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.AttendPossible)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.AttendPresent)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.AttendPer)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.ContEnrols)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.PredictionsCompletedNum)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.PredictionsCompletedPer)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.PredictedToAchieveNum)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.PredictedToAchievePer)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.PredictedToAchieveHighNum)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.PredictedToAchieveHighPer)
+            </td>
+            <td>
+                <a asp-page="./Edit" asp-route-id="@item.CourseID">Edit</a> |
+                <a asp-page="./Details" asp-route-id="@item.CourseID">Details</a> |
+                <a asp-page="./Delete" asp-route-id="@item.CourseID">Delete</a>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>

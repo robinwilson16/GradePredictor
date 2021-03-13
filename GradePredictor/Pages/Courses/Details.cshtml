@@ -1,0 +1,189 @@
+﻿@page "{academicYear}/{courseCode}/{groupCode}"
+@model GradePredictor.Pages.Courses.DetailsModel
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Xsrf
+
+@{
+    ViewData["Title"] = "Details";
+}
+
+<div class="container-fluid mt-3">
+    <div class="row">
+        <div class="col-md-9">
+            <h2>
+                <i class="fas fa-graduation-cap"></i> @Html.DisplayFor(model => model.CourseGroupCode) - @Html.DisplayFor(model => model.Course.CourseTitle)
+            </h2>
+        </div>
+        <div class="col-md-3">
+            <div class="alert alert-success" role="alert">
+                <i class="fas fa-edit"></i> @Html.DisplayFor(model => model.Course.AimTypeName)
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md">
+            <div class="bd-callout bd-callout-warning">
+                <div class="row">
+                    <div class="col-md">
+                        <div class="row">
+                            <div class="col-sm-4">
+                                @Html.DisplayNameFor(model => model.Course.CourseTitle)
+                            </div>
+                            <div class="col-sm-8">
+                                @Html.DisplayFor(model => model.Course.CourseTitle)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md">
+                        <div class="row">
+                            <div class="col-sm-4">
+                                @Html.DisplayNameFor(model => model.Course.GroupCode)
+                            </div>
+                            <div class="col-sm-8">
+                                @Html.DisplayFor(model => model.Course.GroupCode)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md">
+                        <div class="row">
+                            <div class="col-sm-4">
+                                Main Lecturer
+                            </div>
+                            <div class="col-sm-8">
+                                @Html.DisplayFor(model => model.Course.MainLecturerForename) @Html.DisplayFor(model => model.Course.MainLecturerSurname)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md">
+                        <div class="row">
+                            <div class="col-sm-4">
+                                @Html.DisplayNameFor(model => model.Course.AttendPer)
+                            </div>
+                            <div class="col-sm-8">
+                                <div class="AttendPercent @Html.DisplayFor(model => model.Course.AttendRate)">
+                                    <div class="AttendValue">@Html.DisplayFor(model => model.Course.AttendPer)</div>
+                                    <div class="AttendBar" style="width: @Html.DisplayFor(model => model.Course.AttendPer)">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md">
+                        <div class="row">
+                            <div class="col-sm-4">
+                                @Html.DisplayNameFor(model => model.Course.ContEnrols)
+                            </div>
+                            <div class="col-sm-8">
+                                @Html.DisplayFor(model => model.Course.ContEnrols)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md">
+                        <div class="row">
+                            <div class="col-sm-4">
+                                @Html.DisplayNameFor(model => model.Course.EndDate)
+                            </div>
+                            <div class="col-sm-8">
+                                @Model.Course.EndDate.ToString("dd/MM/yyyy")
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md">
+                        <div class="row">
+                            <div class="col-sm-4">
+                                @Html.DisplayNameFor(model => model.Course.PredictionsCompletedPer)
+                            </div>
+                            <div class="col-sm-8">
+                                @Html.DisplayFor(model => model.Course.PredictionsCompletedPer)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md">
+                        <div class="row">
+                            <div class="col-sm-4">
+                                @Html.DisplayNameFor(model => model.Course.PredictedToAchievePer)
+                            </div>
+                            <div class="col-sm-8">
+                                @Html.DisplayFor(model => model.Course.PredictedToAchievePer)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md">
+                        <div class="row">
+                            <div class="col-sm-4">
+                                @Html.DisplayNameFor(model => model.Course.PredictedToAchieveHighPer)
+                            </div>
+                            <div class="col-sm-8">
+                                @Html.DisplayFor(model => model.Course.PredictedToAchieveHighPer)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md">
+            <div class="alert alert-primary" role="alert">
+                Use the boxes below to predict timely<button type="button" class="btn btn-outline-primary btn-sm TimelyMeasuresButton"><i class="fas fa-question-circle"></i></button> and overall<button type="button" class="btn btn-outline-primary btn-sm OverallMeasuresButton"><i class="fas fa-question-circle"></i></button> achievement rates for the continuing learners due to complete by 31/07/20@(Model.AcademicYearID.Substring(Model.AcademicYearID.Length - 2, 2)) on this course. This will update the information in ProSolution.
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md">
+            <div id="StudentListArea" class="table-responsive">
+                <table id="StudentList" class="table table-striped table-bordered table-hover table-sm dataList" aria-label="Students">
+                    <thead>
+                        <tr>
+                            <th>Student Ref</th>
+                            <th>Surname</th>
+                            <th>Forename</th>
+                            <th>Group Code</th>
+                            <th>Completion Status</th>
+                            <th>Attend %</th>
+                            <th>Start Date</th>
+                            <th>Exp End Date</th>
+                            <th>Pred to Ach</th>
+                            <th>Predicted to Achieve By</th>
+                            <th>Pred Grade</th>
+                            <th>Comments</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md">
+            <div class="alert alert-dark" role="alert">
+                <div class="row">
+                    <div class="col-md">
+                        <button id="BackButtonBottom" type="button" class="btn btn-primary BackButton"><i class="fas fa-chevron-left"></i> Return to Course List</button>
+                    </div>
+                    <div class="col-md text-right">
+                        <select id="PredictedToAchieveID" name="PredictedToAchieveID" class="form-control custom-select PredictedToAchieveID" asp-items="ViewBag.YesNoID" hidden></select>
+                        <select id="PredictedToAchieveByID" name="PredictedToAchieveByID" class="form-control custom-select PredictedToAchieveByID" asp-items="ViewBag.PredictedToAchieveByID" hidden></select>
+                        <select id="PredictedGradeID" name="PredictedGradeID" class="form-control custom-select PredictedGradeID" asp-items="ViewBag.PredictedGradeID" hidden></select>
+                        <button id="SaveButtonBottom" type="button" class="btn btn-success SaveButton"><i class="fas fa-save"></i> Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<partial name="_DetailsModalsPartial" model="Model" />
+
+<!-- Hidden Inputs -->
+<input id="AntiForgeryTokenID" name="__RequestVerificationToken" type="hidden" value=" @Xsrf.GetAndStoreTokens(this.HttpContext).RequestToken" />
+<partial name="_DetailsHiddenInputsPartial" model="Model" />
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_DetailsScriptsPartial");}
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

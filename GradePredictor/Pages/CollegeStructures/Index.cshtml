@@ -1,0 +1,145 @@
+﻿@page "{academicYear}/{username}/{structureLevel:int}"
+@model GradePredictor.Pages.CollegeStructures.IndexModel
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Index</h1>
+
+<p>
+    <a asp-page="Create">Create New</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.CollegeStructure[0].CollegeStructureCode)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CollegeStructure[0].CollegeStructureName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CollegeStructure[0].CollegeStructureLevel)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CollegeStructure[0].CollegeCode)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CollegeStructure[0].CollegeName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CollegeStructure[0].FacCode)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CollegeStructure[0].FacName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CollegeStructure[0].TeamCode)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CollegeStructure[0].TeamName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CollegeStructure[0].AttendPossible)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CollegeStructure[0].AttendPresent)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CollegeStructure[0].AttendPer)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CollegeStructure[0].ContEnrols)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CollegeStructure[0].PredictionsCompletedNum)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CollegeStructure[0].PredictionsCompletedPer)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CollegeStructure[0].PredictedToAchieveNum)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CollegeStructure[0].PredictedToAchievePer)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CollegeStructure[0].PredictedToAchieveHighNum)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CollegeStructure[0].PredictedToAchieveHighPer)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.CollegeStructure)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CollegeStructureCode)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CollegeStructureName)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CollegeStructureLevel)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CollegeCode)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CollegeName)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.FacCode)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.FacName)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.TeamCode)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.TeamName)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.AttendPossible)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.AttendPresent)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.AttendPer)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.ContEnrols)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PredictionsCompletedNum)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PredictionsCompletedPer)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PredictedToAchieveNum)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PredictedToAchievePer)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PredictedToAchieveHighNum)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PredictedToAchieveHighPer)
+                </td>
+                <td>
+                    <a asp-page="./Edit" asp-route-id="@item.CollegeStructureID">Edit</a> |
+                    <a asp-page="./Details" asp-route-id="@item.CollegeStructureID">Details</a> |
+                    <a asp-page="./Delete" asp-route-id="@item.CollegeStructureID">Delete</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

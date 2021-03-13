@@ -1,0 +1,34 @@
+CREATE PROCEDURE [dbo].[SPR_GPR_StaffList]
+    @AcademicYear NVARCHAR(5)
+AS
+BEGIN
+	SET XACT_ABORT, NOCOUNT ON;
+
+	--DECLARE @AcademicYear VARCHAR(5) = '20/21'
+
+	SELECT DISTINCT
+		StaffRef = STF.StaffRefNo,
+		Forename = STF.FirstName,
+		Surname = STF.Surname
+	FROM ProSolution.dbo.Offering CRS
+	INNER JOIN ProSolution.dbo.RegisterCourse REGC
+		ON REGC.OfferingID = CRS.OfferingID
+	INNER JOIN ProSolution.dbo.Register REG
+		ON REG.RegisterID = REGC.RegisterID
+	INNER JOIN ProSolution.dbo.RegisterSchedule REGSC
+		ON REGSC.RegisterID = REG.RegisterID
+	INNER JOIN ProSolution.dbo.RegisterScheduleLecturer REGSCL
+		ON REGSCL.RegisterScheduleID = REGSC.RegisterScheduleID
+	INNER JOIN ProSolution.dbo.RegisterLecturer REGL
+		ON REGL.RegisterLecturerID = REGSCL.RegisterLecturerID
+	INNER JOIN ProSolution.dbo.Staff STF
+		ON STF.StaffID = REGL.StaffID
+	LEFT JOIN ProSolution.dbo.OfferingGroup GRP
+		ON GRP.OfferingGroupID = REGC.OfferingGroupID
+	WHERE
+		CRS.AcademicYearID = @AcademicYear
+	ORDER BY
+		STF.FirstName,
+		STF.Surname,
+		STF.StaffRefNo
+END
