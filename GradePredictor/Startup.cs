@@ -1,10 +1,12 @@
 using GradePredictor.Data;
 using GradePredictor.Models;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI;
+using Microsoft.AspNetCore.Server.IISIntegration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,15 +34,44 @@ namespace GradePredictor
                 options.UseSqlServer(
                     Configuration.GetConnectionString("DefaultConnection")));
             services.AddDatabaseDeveloperPageExceptionFilter();
+
+            services.AddIdentity<ApplicationUser, ApplicationRole>(
+                options => options.Stores.MaxLengthForKeys = 128)
+                .AddEntityFrameworkStores<ApplicationDbContext>()
+                .AddDefaultUI()
+                .AddDefaultTokenProviders();
+
+            services.AddAuthentication(IISDefaults.AuthenticationScheme);
+            services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                .AddCookie();
+
             services.AddRazorPages();
 
             //Enable configuration options directly in _Layout
             services.Configure<SystemSettings>
                 (Configuration.GetSection("SystemSettings"));
+
+            services.Configure<IdentityOptions>(options =>
+            {
+                // Default Password settings.
+                options.Password.RequireDigit = true;
+                options.Password.RequireLowercase = true;
+                options.Password.RequireNonAlphanumeric = false;
+                options.Password.RequireUppercase = true;
+                options.Password.RequiredLength = 6;
+                options.Password.RequiredUniqueChars = 1;
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(
+            IApplicationBuilder app, 
+            IWebHostEnvironment env,
+            ApplicationDbContext context,
+            RoleManager<ApplicationRole> roleManager,
+            UserManager<ApplicationUser> userManager,
+            IConfiguration configuration
+            )
         {
             if (env.IsDevelopment())
             {
@@ -66,6 +97,8 @@ namespace GradePredictor
             {
                 endpoints.MapRazorPages();
             });
+
+            DbInitializer.Initialize(context, userManager, roleManager, configuration).Wait();// seed here
         }
     }
 }

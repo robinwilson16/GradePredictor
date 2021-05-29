@@ -6,6 +6,8 @@ AS
 BEGIN
 	SET XACT_ABORT, NOCOUNT ON;
 
+	SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+
 	--DECLARE @AcademicYear VARCHAR(5) = '20/21'
 	--DECLARE @CourseCode NVARCHAR(50) = 'ARTL111001-AL1'
 	--DECLARE @GroupCode NVARCHAR(255) = 'A'
@@ -61,6 +63,8 @@ BEGIN
 		ON CMP.CompletionStatusID = ENR.CompletionStatusID
 	LEFT JOIN ProSolution.dbo.OfferingGroup GRP
 		ON GRP.OfferingGroupID = ENR.OfferingGroupID
+	LEFT JOIN ProSolution.dbo.WBLPeriodOFTraining POT
+		ON POT.WBLPeriodOfTrainingID = ENR.WBLPeriodOfTrainingID
 	LEFT JOIN (
 		SELECT
 			StudentDetailID = SD.StudentDetailID,
@@ -170,6 +174,19 @@ BEGIN
 		AND GRP.Code = COALESCE ( @GroupCode, GRP.Code )
 		AND ENR.CompletionStatusID = '1'
 		AND CAST ( ENR.ExpectedEndDate AS DATE ) <= '20' + RIGHT ( SD.AcademicYearID, 2 ) + '-07-31'
+		AND CAST ( ENR.StartDate AS DATE ) <= GETDATE()
+		AND
+			--If App only show ZPROG aim
+			CASE
+				WHEN 
+					ENR.FundingID IN ( '35', '36', '99' )
+					AND POT.ProgrammeTypeID IS NOT NULL THEN
+						CASE
+							WHEN ENR.AimTypeID = 1 THEN 1
+							ELSE 0
+						END
+				ELSE 1
+			END = 1
 	ORDER BY
 		CRS.Code,
 		GRP.Code,

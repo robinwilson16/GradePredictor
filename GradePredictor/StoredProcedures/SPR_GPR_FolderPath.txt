@@ -1,0 +1,56 @@
+CREATE PROCEDURE [dbo].[SPR_GPR_FolderPath]
+	@AcademicYear NVARCHAR(5),
+	@CollegeGroup NVARCHAR(50),
+	@Fac NVARCHAR(50),
+	@Team NVARCHAR(50),
+	@Course NVARCHAR(50)
+AS
+BEGIN
+	SET XACT_ABORT, NOCOUNT ON;
+
+	SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+
+	--DECLARE @AcademicYear VARCHAR(5) = '20/21'
+	--DECLARE @CollegeGroup NVARCHAR(50) = 'ML1-01'
+	--DECLARE @Fac NVARCHAR(50) = 'ML2-10'
+	--DECLARE @Team NVARCHAR(50) = 'HSC-01'
+	--DECLARE @Course NVARCHAR(50) = 'INCEL11001'
+
+	DECLARE @AcademicYearPath NVARCHAR(5) = REPLACE ( @AcademicYear, '/', '-' )
+
+	SELECT
+		FolderPathID = 0,
+		Path = 
+			'[FOLDER] ' + '<a class="alert-link" href="/' + @AcademicYearPath + '/" title="Go home">WLC</a>'
+			+ CASE
+				WHEN CGRP.Code IS NOT NULL THEN ' [DIVIDER] [FOLDER] ' + '<a class="alert-link" href="/' + @AcademicYearPath + '/' + RTRIM ( CGRP.Code ) + '/" title="Go to ' + RTRIM ( CGRP.Code ) + '">' + RTRIM ( CGRP.Code ) + ' - ' + CGRP.Name + '</a>'
+				ELSE ''
+			END
+			+ CASE
+				WHEN FAC.Code IS NOT NULL THEN ' [DIVIDER] [FOLDER] ' + '<a class="alert-link" href="/' + @AcademicYearPath + '/' + RTRIM ( CGRP.Code ) + '/' + RTRIM ( FAC.Code ) + '/" title="Go to ' + RTRIM ( CGRP.Code ) + ' > ' + RTRIM ( FAC.Code ) + '">' + RTRIM ( FAC.Code ) + ' - ' + FAC.Name + '</a>'
+				ELSE ''
+			END
+			+ CASE
+				WHEN TEAM.Code IS NOT NULL THEN ' [DIVIDER] [FOLDER] ' + '<a class="alert-link" href="/' + @AcademicYearPath + '/' + RTRIM ( CGRP.Code ) + '/' + RTRIM ( FAC.Code ) + '/' + RTRIM ( TEAM.Code ) + '/" title="Go to ' + RTRIM ( CGRP.Code ) + ' > ' + RTRIM ( FAC.Code ) + ' > ' + RTRIM ( TEAM.Code ) + '">' + RTRIM ( TEAM.Code ) + ' - ' + TEAM.Name + '</a>'
+				ELSE ''
+			END
+			+ CASE
+				WHEN CRS.Code IS NOT NULL THEN ' [DIVIDER] [FOLDER] ' + '<a class="alert-link" href="/' + @AcademicYearPath + '/' + RTRIM ( CGRP.Code ) + '/' + RTRIM ( FAC.Code ) + '/' + RTRIM ( TEAM.Code ) + '/' + RTRIM ( CRS.Code ) + '/" title="Go to ' + RTRIM ( CGRP.Code ) + ' > ' + RTRIM ( FAC.Code ) + ' > ' + RTRIM ( TEAM.Code ) + ' > ' + RTRIM ( CRS.Code ) + '">' + RTRIM ( CRS.Code ) + ' - ' + CRS.Name + '</a>'
+				ELSE ''
+			END
+	FROM ProSolution.dbo.CollegeLevel COL
+	LEFT JOIN ProSolution.dbo.CollegeLevel CGRP
+		ON CGRP.ParentSID = COL.SID
+		AND CGRP.Code = @CollegeGroup
+	LEFT JOIN ProSolution.dbo.CollegeLevel FAC
+		ON FAC.ParentSID = CGRP.SID
+		AND FAC.Code = @Fac
+	LEFT JOIN ProSolution.dbo.CollegeLevel TEAM
+		ON TEAM.ParentSID = FAC.SID
+		AND TEAM.Code = @Team
+	LEFT JOIN ProSolution.dbo.Offering CRS
+		ON CRS.AcademicYearID = @AcademicYear
+		AND CRS.Code = @Course
+	WHERE
+		COL.LevelNum = 0
+END

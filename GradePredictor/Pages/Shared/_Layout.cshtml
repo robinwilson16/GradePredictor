@@ -22,6 +22,7 @@
 
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true">
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500&display=swap" rel="stylesheet">
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
@@ -34,8 +35,8 @@
                     aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="navbar-collapse collapse d-sm-inline-flex flex-sm-row-reverse">
-                <p class="nav navbar-text navbar-right">@ApplicationSettings.Value.Greeting, <i class="fas fa-user"></i> @AccountName()</p>
+            <div class="navbar-collapse collapse d-sm-inline-flex">
+                @*<p class="nav navbar-text navbar-right">@ApplicationSettings.Value.Greeting, <i class="fas fa-user"></i> @AccountName() @User.Identity.Name @User.IsInRole("Admin")</p>*@
                 <ul class="navbar-nav mr-auto">
                     <li class="nav-item">
                         <a class="nav-link" asp-page="/Index"><i class="fas fa-home"></i> Home</a>
@@ -47,12 +48,13 @@
                         </a>
                         <div class="dropdown-menu" aria-labelledby="HelpDropdown">
                             <a class="dropdown-item" href="#" id="ChangelogLink"><i class="fas fa-pencil-alt"></i> Changelog</a>
-                            <a class="dropdown-item" href="https://github.com/robinwilson16/WLCProgressions/issues" target="_blank" rel="noopener"><i class="fas fa-bug"></i> Issues?</a>
+                            <a class="dropdown-item" href="https://github.com/robinwilson16/GradePredictor/issues" target="_blank" rel="noopener"><i class="fas fa-bug"></i> Issues?</a>
                             <div class="dropdown-divider"></div>
                             <a class="dropdown-item" href="#" id="AboutSystemLink"><i class="fas fa-question-circle"></i> About</a>
                         </div>
                     </li>
                 </ul>
+                <partial name="_LoginPartial" />
             </div>
         </div>
     </nav>
@@ -110,15 +112,3 @@
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
-
-@{
-    string AccountName()
-    {
-        using (var context = new PrincipalContext(ContextType.Domain))
-        {
-            var principal = UserPrincipal.FindByIdentity(context, User.Identity.Name);
-            return principal.GivenName + " " + principal.Surname;
-        }
-    }
-
-}

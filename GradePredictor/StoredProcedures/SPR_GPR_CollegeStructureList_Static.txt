@@ -1,0 +1,301 @@
+CREATE PROCEDURE [dbo].[SPR_GPR_CollegeStructureList_Static]
+	@AcademicYear NVARCHAR(5),
+    @Username NVARCHAR(50),
+	@CoursesITeach BIT,
+	@CourseCode NVARCHAR(50),
+	@GroupCode NVARCHAR(50),
+	@CollegeGroup NVARCHAR(50),
+	@Fac NVARCHAR(50),
+	@Team NVARCHAR(50),
+	@CourseSearch NVARCHAR(255),
+	@StaffSearch NVARCHAR(255),
+	@StructureLevel INT
+AS
+BEGIN
+	SET XACT_ABORT, NOCOUNT ON;
+
+	SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+	
+	--DECLARE @AcademicYear VARCHAR(5) = '20/21'
+	--DECLARE @Username VARCHAR(100) = 'r.wilson2'
+	--DECLARE @CoursesITeach BIT = 0;
+	--DECLARE @CourseCode NVARCHAR(50) = NULL
+	--DECLARE @GroupCode NVARCHAR(255) = NULL
+	--DECLARE @CollegeGroup NVARCHAR(50) = NULL
+	--DECLARE @Fac NVARCHAR(50) = NULL
+	--DECLARE @Team NVARCHAR(50) = NULL
+	--DECLARE @CourseSearch NVARCHAR(255) = NULL
+	--DECLARE @StaffSearch NVARCHAR(255) = NULL
+	--DECLARE @StructureLevel INT = 1
+
+	IF @CourseSearch IS NULL
+	BEGIN
+		SET @CourseSearch = ''
+	END
+
+	IF @StaffSearch IS NULL
+	BEGIN
+		SET @StaffSearch = ''
+	END
+
+	SELECT
+		CollegeStructureID = 
+			CASE
+				WHEN @StructureLevel >= 3 THEN CRS.TeamID
+				WHEN @StructureLevel >= 2 THEN CRS.FacID
+				WHEN @StructureLevel >= 1 THEN CRS.CollegeID
+				ELSE 0
+			END,
+		CollegeStructureCode = 
+			CASE
+				WHEN @StructureLevel >= 3 THEN CRS.TeamCode
+				WHEN @StructureLevel >= 2 THEN CRS.FacCode
+				WHEN @StructureLevel >= 1 THEN CRS.CollegeCode
+				ELSE NULL
+			END,
+		CollegeStructureName = 
+			CASE
+				WHEN @StructureLevel >= 3 THEN CRS.TeamName
+				WHEN @StructureLevel >= 2 THEN CRS.FacName
+				WHEN @StructureLevel >= 1 THEN CRS.CollegeName
+				ELSE NULL
+			END,
+		CollegeStructureLevel = @StructureLevel,
+		CollegeCode = 
+			CASE
+				WHEN @StructureLevel >= 1 THEN CRS.CollegeCode
+				ELSE NULL
+			END,
+		CollegeName = 
+			CASE
+				WHEN @StructureLevel >= 1 THEN CRS.CollegeName
+				ELSE NULL
+			END,
+		FacCode = 
+			CASE
+				WHEN @StructureLevel >= 2 THEN CRS.FacCode
+				ELSE NULL
+			END,
+		FacName = 
+			CASE
+				WHEN @StructureLevel >= 2 THEN CRS.FacName
+				ELSE NULL
+			END,
+		TeamCode = 
+			CASE
+				WHEN @StructureLevel >= 3 THEN CRS.TeamCode
+				ELSE NULL
+			END,
+		TeamName = 
+			CASE
+				WHEN @StructureLevel >= 3 THEN CRS.TeamName
+				ELSE NULL
+			END,
+		Courses = COUNT ( DISTINCT CRS.CourseCode ),
+		Groups = COUNT ( CRS.CourseID ),
+		AttendPossible = SUM ( CRS.AttendPossible ),
+		AttendPresent = SUM ( CRS.AttendPresent ),
+		AttendPer = 
+			ROUND ( 
+				CASE
+					WHEN SUM ( CRS.AttendPossible ) = 0 THEN 0
+					ELSE 
+						CAST ( SUM ( CRS.AttendPresent ) AS FLOAT )
+						/
+						CAST ( SUM ( CRS.AttendPossible ) AS FLOAT )
+				END,
+				3
+			),
+		AttendRate = 
+			CASE
+				WHEN SUM ( CRS.AttendPossible ) = 0 THEN 'NoRegisters'
+				WHEN 
+					ROUND ( 
+						CASE
+							WHEN SUM ( CRS.AttendPossible ) = 0 THEN 0
+							ELSE 
+								CAST ( SUM ( CRS.AttendPresent ) AS FLOAT )
+								/
+								CAST ( SUM ( CRS.AttendPossible ) AS FLOAT )
+						END,
+						3
+					) = 1 THEN 'Excellent'
+				WHEN 
+					ROUND ( 
+						CASE
+							WHEN SUM ( CRS.AttendPossible ) = 0 THEN 0
+							ELSE 
+								CAST ( SUM ( CRS.AttendPresent ) AS FLOAT )
+								/
+								CAST ( SUM ( CRS.AttendPossible ) AS FLOAT )
+						END,
+						3
+					) BETWEEN 0.900 AND 0.999 THEN 'Good'
+				WHEN 
+					ROUND ( 
+						CASE
+							WHEN SUM ( CRS.AttendPossible ) = 0 THEN 0
+							ELSE 
+								CAST ( SUM ( CRS.AttendPresent ) AS FLOAT )
+								/
+								CAST ( SUM ( CRS.AttendPossible ) AS FLOAT )
+						END,
+						3
+					) BETWEEN 0.850 AND 0.899 THEN 'Poor'
+				ELSE 'VeryPoor'
+			END,
+		ContEnrols = SUM ( CRS.ContEnrols ),
+		PredictionsCompletedNum = SUM ( CRS.PredictionsCompletedNum ),
+		PredictionsCompletedPer = 
+			ROUND ( 
+				CASE
+					WHEN SUM ( CRS.ContEnrols ) = 0 THEN 0
+					ELSE 
+						CAST ( SUM ( CRS.PredictionsCompletedNum ) AS FLOAT )
+						/
+						CAST ( SUM ( CRS.ContEnrols ) AS FLOAT )
+				END,
+				3
+			),
+		PredictedToAchieveNum = SUM ( CRS.PredictedToAchieveNum ),
+		PredictedToAchievePer = 
+			ROUND ( 
+				CASE
+					WHEN SUM ( CRS.ContEnrols ) = 0 THEN 0
+					ELSE 
+						CAST ( SUM ( CRS.PredictedToAchieveNum ) AS FLOAT )
+						/
+						CAST ( SUM ( CRS.ContEnrols ) AS FLOAT )
+				END,
+				3
+			),
+		PredictedToAchieveHighNum = SUM ( CRS.PredictedToAchieveHighNum ),
+		PredictedToAchieveHighPer = 
+			ROUND ( 
+				CASE
+					WHEN SUM ( CRS.ContEnrols ) = 0 THEN 0
+					ELSE 
+						CAST ( SUM ( CRS.PredictedToAchieveHighNum ) AS FLOAT )
+						/
+						CAST ( SUM ( CRS.ContEnrols ) AS FLOAT )
+				END,
+				3
+			)
+	FROM GPR_CourseList CRS
+	LEFT JOIN (
+		SELECT
+			SC.LinkID
+		FROM GPR_StaffCourseLinks SC
+		WHERE
+			SC.Username = @Username
+	) STFL
+		ON STFL.LinkID = CRS.CourseID
+	LEFT JOIN (
+		SELECT
+			Courses = COUNT ( SC.LinkID )
+		FROM GPR_StaffCourseLinks SC
+		WHERE
+			SC.Username = @Username
+	) STF
+		ON 1 = 1
+	LEFT JOIN (
+		SELECT DISTINCT
+			SC.LinkID
+		FROM GPR_StaffCourseLinks SC
+		WHERE
+			SC.StaffName LIKE '%' + @StaffSearch + '%' 
+	) STFS
+		ON STFS.LinkID = CRS.CourseID
+	WHERE
+		--STF.Username = @Username
+		( CRS.CollegeCode = COALESCE ( @CollegeGroup, CRS.CollegeCode ) OR @CollegeGroup = 'ALL' )
+		AND ( CRS.FacCode = COALESCE ( @Fac, CRS.FacCode ) OR @Fac = 'ALL' )
+		AND ( CRS.TeamCode = COALESCE ( @Team, CRS.TeamCode ) OR @Team = 'ALL' )
+		AND
+			CASE
+				WHEN @CourseCode IS NOT NULL AND @GroupCode IS NOT NULL THEN 
+					CASE
+						WHEN 
+							CRS.CourseCode = @CourseCode
+							AND CRS.GroupCode = @GroupCode
+							THEN 1
+						ELSE 0
+					END
+				WHEN @CourseCode IS NOT NULL THEN 
+					CASE
+						WHEN 
+							CRS.CourseCode = @CourseCode
+							THEN 1
+						ELSE 0
+					END
+				WHEN LEN ( @CourseSearch ) + LEN ( @StaffSearch ) > 0 THEN 
+					CASE
+						WHEN 
+							CRS.CourseCode + ' - ' + CRS.CourseTitle LIKE '%' + @CourseSearch + '%' 
+							AND 
+								CASE
+									WHEN LEN ( @StaffSearch ) > 0 THEN
+										CASE
+											WHEN STFS.LinkID = CRS.CourseID THEN 1
+											ELSE 0
+										END
+									ELSE 1
+								END = 1
+							THEN 1
+						ELSE 0
+					END
+				ELSE
+					CASE
+						WHEN STF.Courses > 0 THEN 
+							CASE
+								WHEN @CoursesITeach = 0 THEN 1
+								WHEN STFL.LinkID = CRS.CourseID THEN 1
+								ELSE 0
+							END
+						ELSE 1
+					END
+			END = 1
+	GROUP BY
+		CASE
+			WHEN @StructureLevel >= 3 THEN CRS.TeamID
+			WHEN @StructureLevel >= 2 THEN CRS.FacID
+			WHEN @StructureLevel >= 1 THEN CRS.CollegeID
+			ELSE 0
+		END,
+		CASE
+			WHEN @StructureLevel >= 3 THEN CRS.TeamCode
+			WHEN @StructureLevel >= 2 THEN CRS.FacCode
+			WHEN @StructureLevel >= 1 THEN CRS.CollegeCode
+			ELSE NULL
+		END,
+		CASE
+			WHEN @StructureLevel >= 3 THEN CRS.TeamName
+			WHEN @StructureLevel >= 2 THEN CRS.FacName
+			WHEN @StructureLevel >= 1 THEN CRS.CollegeName
+			ELSE NULL
+		END,
+		CASE
+			WHEN @StructureLevel >= 1 THEN CRS.CollegeCode
+			ELSE NULL
+		END,
+		CASE
+			WHEN @StructureLevel >= 1 THEN CRS.CollegeName
+			ELSE NULL
+		END,
+		CASE
+			WHEN @StructureLevel >= 2 THEN CRS.FacCode
+			ELSE NULL
+		END, 
+		CASE
+			WHEN @StructureLevel >= 2 THEN CRS.FacName
+			ELSE NULL
+		END,
+		CASE
+			WHEN @StructureLevel >= 3 THEN CRS.TeamCode
+			ELSE NULL
+		END,
+		CASE
+			WHEN @StructureLevel >= 3 THEN CRS.TeamName
+			ELSE NULL
+		END
+END

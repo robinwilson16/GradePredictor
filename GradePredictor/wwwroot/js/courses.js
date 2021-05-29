@@ -2,23 +2,107 @@
     "EditCourseButton"
 );
 
+getFolderPath();
+switchDisplay();
+getLecturerClassStats();
+
 var loadingBox = document.getElementById('LoadingAnimation');
 loadingBox.style.display = "flex";
 
+async function getFolderPath() {
+    //Save student data into local browser storage
+    let rootPath = $("#RootPath").val();
+    if (!rootPath) {
+        rootPath = ``;
+    }
+
+    let academicYearID = document.getElementById("AcademicYearID").value;
+    let college = document.getElementById("CollegeGroupID").value;
+    let fac = document.getElementById("FacID").value;
+    let team = document.getElementById("TeamID").value;
+
+    let academicYear = academicYearID.replace("/", "-");
+
+    let folderData = `${rootPath}/FolderPaths/Details/${academicYear}/`;
+
+    if (college != "") {
+        folderData += `${college}/`;
+    }
+    if (fac != "") {
+        folderData += `${fac}/`;
+    }
+    if (team != "") {
+        folderData += `${team}/`;
+    }
+
+    let dataToLoad = folderData;
+
+    loadData("GET", dataToLoad)
+        .then(data => {
+            try {
+                let folderData = $(data).find("#FolderPathData");
+                $("#FolderPathLinks").html(folderData);
+                console.log(dataToLoad + " Loaded");
+            }
+            catch (e) {
+                let title = `Error Loading Folder Data`;
+                let content = `The folder path data could not be loaded`;
+
+                doErrorModal(title, content);
+            }
+        });
+}
+
+function loadData(method, url) {
+    //url = `${url}&${new Date().getTime()};`
+    return new Promise(function (resolve, reject) {
+        let xhr = new XMLHttpRequest();
+        xhr.open(method, url);
+        xhr.setRequestHeader("Cache-Control", "no-cache, no-store, max-age=0");
+        xhr.onload = function () {
+            if (this.status >= 200 && this.status < 300) {
+                resolve(xhr.response);
+            } else {
+                reject({
+                    status: this.status,
+                    statusText: xhr.statusText
+                });
+            }
+        };
+        xhr.onerror = function () {
+            reject({
+                status: this.status,
+                statusText: xhr.statusText
+            });
+        };
+        xhr.send();
+    });
+}
+
 var courseSearchInput = document.getElementById('CourseSearchID');
-courseSearchInput.addEventListener('keyup', function (event) {
-    doCourseSearch();
-    loadingBox.style.display = "flex";
-});
+if (courseSearchInput) {
+    courseSearchInput.addEventListener('keyup', function (event) {
+        doCourseSearch();
+        loadingBox.style.display = "flex";
+    });
+}
 
 var staffSearchInput = document.getElementById('StaffSearchID');
-staffSearchInput.addEventListener('keyup', function (event) {
-    doCourseSearch();
-    loadingBox.style.display = "flex";
-});
+if (staffSearchInput) {
+    staffSearchInput.addEventListener('keyup', function (event) {
+        doCourseSearch();
+        loadingBox.style.display = "flex";
+    });
+}
 
 var academicYearInput = document.getElementById('AcademicYearID');
 academicYearInput.addEventListener('change', function (event) {
+    doCourseSearch();
+    loadingBox.style.display = "flex";
+});
+
+var coursesITeachInput = document.getElementById('CoursesITeachID');
+coursesITeachInput.addEventListener('change', function (event) {
     doCourseSearch();
     loadingBox.style.display = "flex";
 });
@@ -34,8 +118,16 @@ function doCourseSearch() {
     let collegeGroupID = document.getElementById("CollegeGroupID").value;
     let facID = document.getElementById("FacID").value;
     let teamID = document.getElementById("TeamID").value;
-    let courseSearchID = document.getElementById("CourseSearchID").value;
-    let staffSearchID = document.getElementById("StaffSearchID").value;
+    let dataModeID = document.getElementById("DataModeID").value;
+    let courseSearchID = null
+    if (document.getElementById("CourseSearchID")) {
+        courseSearchID = document.getElementById("CourseSearchID").value;
+    }
+    let staffSearchID = null
+    if (document.getElementById("StaffSearchID")) {
+        staffSearchID = document.getElementById("StaffSearchID").value;
+    }
+    let coursesITeachID = document.getElementById("CoursesITeachID").checked;
     let structureLevelID = Number.parseInt(document.getElementById("StructureLevelID").value);
 
     let academicYear = academicYearID.replace("/", "-");
@@ -44,7 +136,11 @@ function doCourseSearch() {
         structureLevelID = 1;
     }
 
-    let collegeStructureData = `${rootPath}/CollegeStructures/${academicYear}/${userID}/${structureLevelID}/?handler=Json`;
+    let collegeStructureData = `${rootPath}/CollegeStructures/${academicYear}/${userID}/${coursesITeachID}/${structureLevelID}/?handler=Json`;
+
+    if (dataModeID) {
+        collegeStructureData += `&dataMode=${dataModeID}`;
+    }
 
     if (collegeGroupID) {
         collegeStructureData += `&collegeGroup=${collegeGroupID}`;
@@ -66,7 +162,11 @@ function doCourseSearch() {
         collegeStructureData += `&staffSearch=${staffSearchID}`;
     }
 
-    let courseData = `${rootPath}/Courses/${academicYear}/${userID}/?handler=Json`;
+    let courseData = `${rootPath}/Courses/${academicYear}/${userID}/${coursesITeachID}/?handler=Json`;
+
+    if (dataModeID) {
+        courseData += `&dataMode=${dataModeID}`;
+    }
 
     if (collegeGroupID) {
         courseData += `&collegeGroup=${collegeGroupID}`;
@@ -98,6 +198,57 @@ function doCourseSearch() {
         listData.ajax.url(courseData).load(null, false);
         console.log(courseData + " Loaded");
     }
+    getFolderPath();
+}
+
+function switchDisplay() {
+    //If showing course level need to switch visible element
+    let structureLevelID = Number.parseInt(document.getElementById("StructureLevelID").value);
+
+    if (structureLevelID >= 4) {
+        collegeStructureTableRow = document.getElementById("CollegeStructureListAreaRow");
+        courseTableRow = document.getElementById("CourseListAreaRow");
+
+        collegeStructureTableRow.classList.add("d-none");
+        courseTableRow.classList.remove("d-none");
+    }
+}
+
+function getLecturerClassStats() {
+    //Save student data into local browser storage
+    let rootPath = $("#RootPath").val();
+    if (!rootPath) {
+        rootPath = ``;
+    }
+
+    let academicYearID = document.getElementById("AcademicYearID").value;
+    let userID = document.getElementById("UserID").value;
+
+    let academicYear = academicYearID.replace("/", "-");
+
+    let classStatsData = `${rootPath}/LecturerClassStats/Details/${academicYear}/${userID}/?handler=Json`;
+
+    let dataToLoad = classStatsData;
+
+    loadData("GET", dataToLoad)
+        .then(data => {
+            try {
+                json = JSON.parse(data);
+                
+                if (!json) {
+                    //If not a lecturer
+                    coursesITeachCheckbox = document.getElementById("CoursesITeachID");
+                    coursesITeachCheckbox.checked = false;
+                    coursesITeachCheckbox.disabled = true;
+                }
+            }
+            catch (e) {
+                let title = `Error Loading Class Stats for ${userID}`;
+                let content = `The class stats data for ${userID} could not be loaded`;
+
+                doErrorModal(title, content);
+            }
+        });
 }
 
 $(function () {
@@ -112,21 +263,32 @@ $(function () {
         rootPath = ``;
     }
     let academicYearID = document.getElementById("AcademicYearID").value;
-    let structureLevelID = document.getElementById("StructureLevelID").value;
     let userID = document.getElementById("UserID").value;
     let collegeGroupID = document.getElementById("CollegeGroupID").value;
     let facID = document.getElementById("FacID").value;
     let teamID = document.getElementById("TeamID").value;
-    let courseSearchID = document.getElementById("CourseSearchID").value;
-    let staffSearchID = document.getElementById("StaffSearchID").value;
-
+    let dataModeID = document.getElementById("DataModeID").value;
+    let courseSearchID = null
+    if (document.getElementById("CourseSearchID")) {
+        courseSearchID = document.getElementById("CourseSearchID").value;
+    }
+    let staffSearchID = null
+    if (document.getElementById("StaffSearchID")) {
+        staffSearchID = document.getElementById("StaffSearchID").value;
+    }
+    let structureLevelID = document.getElementById("StructureLevelID").value;
+    let coursesITeachID = document.getElementById("CoursesITeachID").checked;
     let academicYear = academicYearID.replace("/", "-");
 
     if (!structureLevelID) {
         structureLevelID = 1;
     }
 
-    let collegeStructureData = `${rootPath}/CollegeStructures/${academicYear}/${userID}/${structureLevelID}/?handler=Json`;
+    let collegeStructureData = `${rootPath}/CollegeStructures/${academicYear}/${userID}/${coursesITeachID}/${structureLevelID}/?handler=Json`;
+
+    if (dataModeID) {
+        collegeStructureData += `&dataMode=${dataModeID}`;
+    }
 
     if (collegeGroupID) {
         collegeStructureData += `&collegeGroup=${collegeGroupID}`;
@@ -149,10 +311,19 @@ $(function () {
     }
 
     console.log(collegeStructureData + " Loaded");
+    let courseData = null;
 
-    //let courseData = `${rootPath}/Courses/${academicYear}/${userID}/?handler=Json`;
     //Ensure initial page load does not load any data
-    let courseData = `${rootPath}/Courses/${academicYear}/${0}/?handler=Json`;
+    if (structureLevelID >= 4) {
+        courseData = `${rootPath}/Courses/${academicYear}/${userID}/${coursesITeachID}/?handler=Json`;
+    }
+    else {
+        courseData = `${rootPath}/Courses/${academicYear}/${0}/${false}/?handler=Json`;
+    }
+
+    if (dataModeID) {
+        courseData += `&dataMode=${dataModeID}`;
+    }
 
     if (collegeGroupID) {
         courseData += `&collegeGroup=${collegeGroupID}`;
@@ -408,7 +579,6 @@ $(function () {
         deferRender: true,
         scroller: true,
         scrollY: 460,
-        //ajax: { url: `${rootPath}/Transactions/?handler=Json&search=${searchParams}`, dataSrc: "" },
         ajax: {
             url: courseData,
             dataSrc: ""
@@ -561,8 +731,16 @@ function doCollegeStructureDrill() {
     let collegeGroupID = document.getElementById("CollegeGroupID").value;
     let facID = document.getElementById("FacID").value;
     let teamID = document.getElementById("TeamID").value;
-    let courseSearchID = document.getElementById("CourseSearchID").value;
-    let staffSearchID = document.getElementById("StaffSearchID").value;
+    let dataModeID = document.getElementById("DataModeID").value;
+    let courseSearchID = null
+    if (document.getElementById("CourseSearchID")) {
+        courseSearchID = document.getElementById("CourseSearchID").value;
+    }
+    let staffSearchID = null
+    if (document.getElementById("StaffSearchID")) {
+        staffSearchID = document.getElementById("StaffSearchID").value;
+    }
+    let coursesITeachID = document.getElementById("CoursesITeachID").checked;
     let structureLevelID = Number.parseInt(document.getElementById("StructureLevelID").value);
 
     let academicYear = academicYearID.replace("/", "-");
@@ -571,7 +749,11 @@ function doCollegeStructureDrill() {
         structureLevelID = 1;
     }
 
-    let collegeStructureData = `${rootPath}/CollegeStructures/${academicYear}/${userID}/${structureLevelID}/?handler=Json`;
+    let collegeStructureData = `${rootPath}/CollegeStructures/${academicYear}/${userID}/${coursesITeachID}/${structureLevelID}/?handler=Json`;
+
+    if (dataModeID) {
+        collegeStructureData += `&dataMode=${dataModeID}`;
+    }
 
     if (collegeGroupID) {
         collegeStructureData += `&collegeGroup=${collegeGroupID}`;
@@ -593,7 +775,11 @@ function doCollegeStructureDrill() {
         collegeStructureData += `&staffSearch=${staffSearchID}`;
     }
 
-    let courseData = `${rootPath}/Courses/${academicYear}/${userID}/?handler=Json`;
+    let courseData = `${rootPath}/Courses/${academicYear}/${userID}/${coursesITeachID}/?handler=Json`;
+
+    if (dataModeID) {
+        courseData += `&dataMode=${dataModeID}`;
+    }
 
     if (collegeGroupID) {
         courseData += `&collegeGroup=${collegeGroupID}`;
@@ -632,7 +818,7 @@ function doCollegeStructureDrill() {
         courseTableRow.classList.remove("d-none");
     }
 
-    
+    getFolderPath();
 }
 
 function extraCourseFunctions() {
@@ -726,11 +912,19 @@ function crsCourseDetails(data, type, dataToSet) {
     let academicYearID = document.getElementById("AcademicYearID").value;
     academicYearString = academicYearID.replace("/", "-");
 
+    let dataModeID = document.getElementById("DataModeID").value;
+
     let courseGroupURL = `/Courses/Details/${academicYearString}/${data.courseCode}/`;
     let courseGroupCode = data.courseCode;
     if (data.groupCode) {
         courseGroupURL += `${data.groupCode}/`;
         courseGroupCode += `-${data.groupCode}`;
+    }
+    else {
+        courseGroupURL += `0/`;
+    }
+    if (dataModeID) {
+        courseGroupURL += `?dataMode=${dataModeID}`;
     }
 
     return `

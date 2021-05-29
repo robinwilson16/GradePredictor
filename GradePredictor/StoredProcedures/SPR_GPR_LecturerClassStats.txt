@@ -1,0 +1,42 @@
+CREATE PROCEDURE [dbo].[SPR_GPR_LecturerClassStats]
+	@AcademicYear NVARCHAR(5),
+    @Username NVARCHAR(50)
+AS
+BEGIN
+	SET XACT_ABORT, NOCOUNT ON;
+
+	SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+
+	--DECLARE @AcademicYear VARCHAR(5) = '20/21'
+	--DECLARE @Username VARCHAR(100) = '12255'
+	
+	--Teaching staff
+	SELECT
+		LecturerClassStatID = STF.StaffID,
+		Courses = COUNT ( DISTINCT CRS.OfferingID ),
+		Groups = COUNT ( DISTINCT GRP.OfferingGroupID ),
+		Classes = COUNT ( REGSCL.RegisterScheduleID )
+	FROM ProSolution.dbo.Offering CRS
+	INNER JOIN ProSolution.dbo.RegisterCourse REGC
+		ON REGC.OfferingID = CRS.OfferingID
+	INNER JOIN ProSolution.dbo.Register REG
+		ON REG.RegisterID = REGC.RegisterID
+	INNER JOIN ProSolution.dbo.RegisterSchedule REGSC
+		ON REGSC.RegisterID = REG.RegisterID
+	INNER JOIN ProSolution.dbo.RegisterScheduleLecturer REGSCL
+		ON REGSCL.RegisterScheduleID = REGSC.RegisterScheduleID
+	INNER JOIN ProSolution.dbo.RegisterLecturer REGL
+		ON REGL.RegisterLecturerID = REGSCL.RegisterLecturerID
+	INNER JOIN ProSolution.dbo.Staff STF
+		ON STF.StaffID = REGL.StaffID
+	INNER JOIN ProSolution.dbo._CCC_SystemUser SU
+		ON SU.SystemUserID = STF.SystemUserID
+	LEFT JOIN ProSolution.dbo.OfferingGroup GRP
+		ON GRP.OfferingGroupID = REGC.OfferingGroupID
+	WHERE
+		CRS.AcademicYearID = @AcademicYear
+		AND SU.Username = @Username
+	GROUP BY
+		STF.StaffID
+
+END

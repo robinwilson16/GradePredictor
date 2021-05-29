@@ -1,0 +1,80 @@
+﻿@page
+@model LogoutModel
+@{
+    ViewData["Title"] = "Log Out of Grade Predictor";
+}
+
+<div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel">
+    <div class="carousel-inner">
+        <div class="carousel-item active">
+            <img class="d-block w-100" src="/images/HammersmithCampus.jpg" alt="Photo of the front of Hammersmith College Campus">
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row">
+        <div class="d-none d-lg-block col-xl-3 col-lg-1">
+
+        </div>
+        <div class="col-xl-6 col-lg-10 col-md">
+            <div class="LoginBox">
+                <div class="card Dark">
+                    <h3 class="card-title"><i class="fas fa-sign-out-alt"></i> @ViewData["Title"]</h3>
+                    <div class="card-body">
+                        <div class="container">
+                            <div class="row">
+                                <div class="col-md">
+                                    <section>
+                                        @{
+                                            if (User.Identity.IsAuthenticated)
+                                            {
+                                                <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/", new { area = "" })" method="post">
+                                                    <button type="submit" class="nav-link btn btn-link text-dark">Click here to Logout</button>
+                                                </form>
+                                            }
+                                            else
+                                            {
+                                                <p>You have successfully logged out of the Grade Predictor.</p>
+                                                <div class="form-group row">
+                                                    <div class="col-md d-md-block d-sm-none">
+
+                                                    </div>
+                                                    <div class="col-md-4 text-center">
+                                                        <a href="~/" class="btn btn-primary btn-block" title="OK"><i class="fas fa-home"></i> OK</a>
+                                                    </div>
+                                                    <div class="col-md d-md-block d-sm-none">
+
+                                                    </div>
+                                                </div>
+                                                
+                                            }
+                                        }
+                                    </section>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="d-none d-lg-block col-xl-3 col-lg-1">
+
+        </div>
+    </div>
+</div>
+@*<header>
+        <h1>@ViewData["Title"]</h1>
+        @{
+            if (User.Identity.IsAuthenticated)
+            {
+                <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Page("/", new { area = "" })" method="post">
+                    <button type="submit" class="nav-link btn btn-link text-dark">Click here to Logout</button>
+                </form>
+            }
+            else
+            {
+                <p>You have successfully logged out of the application.</p>
+            }
+        }
+    </header>*@

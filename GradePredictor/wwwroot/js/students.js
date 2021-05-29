@@ -104,14 +104,42 @@ saveButton.forEach(function (button) {
 });
 
 function goBack() {
+    let rootPath = $("#RootPath").val();
+    if (!rootPath) {
+        rootPath = ``;
+    }
+
     let hasUnsavedChanges = document.getElementById("HasUnsavedChangesID").value;
+    let academicYearID = document.getElementById("AcademicYearID").value;
+    let college = document.getElementById("CollegeGroupID").value;
+    let fac = document.getElementById("FacID").value;
+    let team = document.getElementById("TeamID").value;
+    let dataModeID = document.getElementById("DataModeID").value;
+
+    let academicYear = academicYearID.replace("/", "-");
+
+    let goBackURL = `${rootPath}/${academicYear}/`;
+
+    if (college != "") {
+        goBackURL += `${college}/`;
+    }
+    if (fac != "") {
+        goBackURL += `${fac}/`;
+    }
+    if (team != "") {
+        goBackURL += `${team}/`;
+    }
+    if (dataModeID) {
+        goBackURL += `?dataMode=${dataModeID}`;
+    }
+
     //window.location.href = "/";
     if (hasUnsavedChanges === "Y") {
         askSaveChanges();
     }
     else {
         loadingBox.style.display = "flex";
-        window.location.href = "/";
+        window.location.href = goBackURL;
     }
 }
 
@@ -397,6 +425,7 @@ async function getStudentData() {
     let academicYearID = document.getElementById("AcademicYearID").value;
     let courseCode = document.getElementById("CourseCodeID").value;
     let groupCode = document.getElementById("GroupCodeID").value;
+    let dataModeID = document.getElementById("DataModeID").value;
 
     let academicYear = academicYearID.replace("/", "-");
 
@@ -405,8 +434,15 @@ async function getStudentData() {
     if (groupCode != "") {
         studentData += `${groupCode}/`;
     }
+    else {
+        studentData += `0/`;
+    }
 
     studentData += `?handler=Json`;
+
+    if (dataModeID) {
+        studentData += `&dataMode=${dataModeID}`;
+    }
 
     let dataToLoad = studentData;
 
@@ -463,6 +499,7 @@ $(function () {
     let academicYearID = document.getElementById("AcademicYearID").value;
     let courseCode = document.getElementById("CourseCodeID").value;
     let groupCode = document.getElementById("GroupCodeID").value;
+    let dataModeID = document.getElementById("DataModeID").value;
 
     let academicYear = academicYearID.replace("/", "-");
 
@@ -471,12 +508,19 @@ $(function () {
     if (groupCode != "") {
         studentData += `${groupCode}/`;
     }
+    else {
+        studentData += `0/`;
+    }
 
     studentData += `?handler=Json`;
 
+    if (dataModeID) {
+        studentData += `&dataMode=${dataModeID}`;
+    }
+
     console.log(studentData + " Loaded");
 
-    let students = JSON.parse(window.localStorage.getItem("students"));
+    //let students = JSON.parse(window.localStorage.getItem("students"));
 
     StudentListDT = $('#StudentList').DataTable({
         dom: '<"row"<"col-md"l><"col-md"f>>rt<"row"<"col-md"ip><"col-md text-right"B>>',
@@ -531,7 +575,7 @@ $(function () {
         colReorder: true,
         deferRender: true,
         scroller: true,
-        scrollY: 300,
+        scrollY: 260,
         ajax: {
             url: studentData,
             dataSrc: ""
@@ -576,6 +620,13 @@ $(function () {
                     filter: "groupCode"
                 },
                 className: "text-center"
+            },
+            {
+                data: {
+                    _: "completionStatusCode",
+                    sort: "completionStatusCode",
+                    filter: "completionStatusCode"
+                }
             },
             {
                 data: {

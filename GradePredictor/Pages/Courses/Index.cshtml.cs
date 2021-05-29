@@ -7,9 +7,11 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using GradePredictor.Data;
 using GradePredictor.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace GradePredictor.Pages.Courses
 {
+    [Authorize(Roles = "Admin,BMIS,Subcontractor")]
     public class IndexModel : PageModel
     {
         private readonly GradePredictor.Data.ApplicationDbContext _context;
@@ -21,23 +23,41 @@ namespace GradePredictor.Pages.Courses
 
         public IList<Course> Course { get;set; }
 
-        public async Task OnGetAsync(string academicYear, string username, string collegeGroup, string fac, string team, string courseSearch, string staffSearch)
+        public async Task OnGetAsync(string academicYear, string username, string coursesITeach, string collegeGroup, string fac, string team, string courseSearch, string staffSearch, string dataMode)
         {
             string academicYearID = academicYear.Replace("-", "/");
-            
+
             //Course = await _context.Course.ToListAsync();
-            Course = await _context.Course
-                .FromSqlInterpolated($"EXEC SPR_GPR_CourseList @AcademicYear={academicYearID}, @Username={username}, @CourseCode={null}, @GroupCode={null}, @CollegeGroup={collegeGroup}, @Fac={fac}, @Team={team}, @CourseSearch={courseSearch}, @StaffSearch={staffSearch}")
-                .ToListAsync();
+            if (dataMode == "STATIC")
+            {
+                Course = await _context.Course
+                    .FromSqlInterpolated($"EXEC SPR_GPR_CourseList_Static @AcademicYear={academicYearID}, @Username={username}, @CoursesITeach={coursesITeach}, @CourseCode={null}, @GroupCode={null}, @CollegeGroup={collegeGroup}, @Fac={fac}, @Team={team}, @CourseSearch={courseSearch}, @StaffSearch={staffSearch}")
+                    .ToListAsync();
+            }
+            else
+            {
+                Course = await _context.Course
+                    .FromSqlInterpolated($"EXEC SPR_GPR_CourseList @AcademicYear={academicYearID}, @Username={username}, @CoursesITeach={coursesITeach}, @CourseCode={null}, @GroupCode={null}, @CollegeGroup={collegeGroup}, @Fac={fac}, @Team={team}, @CourseSearch={courseSearch}, @StaffSearch={staffSearch}")
+                    .ToListAsync();
+            }
         }
 
-        public async Task<JsonResult> OnGetJsonAsync(string academicYear, string username, string collegeGroup, string fac, string team, string courseSearch, string staffSearch)
+        public async Task<JsonResult> OnGetJsonAsync(string academicYear, string username, string coursesITeach, string collegeGroup, string fac, string team, string courseSearch, string staffSearch, string dataMode)
         {
             string academicYearID = academicYear.Replace("-", "/");
 
-            Course = await _context.Course
-                .FromSqlInterpolated($"EXEC SPR_GPR_CourseList @AcademicYear={academicYearID}, @Username={username}, @CourseCode={null}, @GroupCode={null}, @CollegeGroup={collegeGroup}, @Fac={fac}, @Team={team}, @CourseSearch={courseSearch}, @StaffSearch={staffSearch}")
-                .ToListAsync();
+            if (dataMode == "STATIC")
+            {
+                Course = await _context.Course
+                    .FromSqlInterpolated($"EXEC SPR_GPR_CourseList_Static @AcademicYear={academicYearID}, @Username={username}, @CoursesITeach={coursesITeach}, @CourseCode={null}, @GroupCode={null}, @CollegeGroup={collegeGroup}, @Fac={fac}, @Team={team}, @CourseSearch={courseSearch}, @StaffSearch={staffSearch}")
+                    .ToListAsync();
+            }
+            else
+            {
+                Course = await _context.Course
+                    .FromSqlInterpolated($"EXEC SPR_GPR_CourseList @AcademicYear={academicYearID}, @Username={username}, @CoursesITeach={coursesITeach}, @CourseCode={null}, @GroupCode={null}, @CollegeGroup={collegeGroup}, @Fac={fac}, @Team={team}, @CourseSearch={courseSearch}, @StaffSearch={staffSearch}")
+                    .ToListAsync();
+            }
 
             return new JsonResult(Course);
         }

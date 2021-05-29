@@ -1,0 +1,71 @@
+CREATE PROCEDURE [dbo].[SPR_GPR_Subcontractor]
+	@SubcontractorID VARCHAR(8),
+	@Password VARCHAR(255)
+AS
+BEGIN
+	SET XACT_ABORT, NOCOUNT ON;
+
+	SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+
+	--DECLARE @SubcontractorID VARCHAR(8) = '10031325'
+	--DECLARE @Password VARCHAR(255) = 'AssessMy$tudents'
+
+	SELECT
+		PAR.SubcontractorID,
+		PAR.Name,
+		PAR.Email,
+		PAR.Password
+	FROM (
+		SELECT
+			SubcontractorID = PAR.UKPRN,
+			Name = PAR.Name,
+			Email = COALESCE ( PAR.Email, CON.ContactEmail ),
+			Password = COALESCE ( PAR.UserDefined4, 'AssessMy$tudents' ),
+			RowNum = 
+				ROW_NUMBER () OVER (
+					PARTITION BY
+						PAR.UKPRN
+					ORDER BY
+						CASE WHEN COALESCE ( PAR.UserDefined4, 'AssessMy$tudents' ) IS NOT NULL THEN 1 ELSE 2 END,
+						CASE WHEN PAR.Name IS NOT NULL THEN 1 ELSE 2 END,
+						CASE WHEN COALESCE ( PAR.Email, CON.ContactEmail ) IS NOT NULL THEN 1 ELSE 2 END,
+						PAR.Name
+				)
+		FROM ProSolution.dbo.Organisation PAR
+		LEFT JOIN (
+			SELECT
+				OrganisationID = PAR.OrganisationID,
+				ContactTitle = CON.Title,
+				ContactForename = CON.FirstName,
+				ContactSurname = CON.Surname,
+				ContactJobTitle = CON.JobTitle,
+				ContactEmail = CON.Email,
+				ContactOrder = 
+					ROW_NUMBER () OVER ( 
+						PARTITION BY
+							PAR.OrganisationID
+						ORDER BY
+							CON.isPrimary DESC,
+							CASE WHEN CON.Email IS NOT NULL THEN 1 ELSE 2 END,
+							CON.CanBeContactByEmail DESC,
+							CON.CanBeSharedByEmail DESC,
+							CON.OrganisationContactID DESC
+					)
+			FROM ProSolution.dbo.Organisation PAR
+			INNER JOIN ProSolution.dbo.OrganisationContact CON
+				ON CON.OrganisationID = PAR.OrganisationID
+		) CON
+			ON CON.OrganisationID = PAR.OrganisationID
+			AND CON.ContactOrder = 1
+		WHERE
+			PAR.OrganisationTypeID = 5 --Training Provider
+			AND PAR.UKPRN IS NOT NULL
+			AND COALESCE ( PAR.UserDefined4, 'AssessMy$tudents' ) IS NOT NULL
+			AND PAR.UKPRN = COALESCE ( @SubcontractorID, PAR.UKPRN )
+			AND COALESCE ( PAR.UserDefined4, 'AssessMy$tudents' ) = COALESCE ( @Password, PAR.UserDefined4, 'AssessMy$tudents' )
+	) PAR
+	WHERE
+		PAR.RowNum = 1
+		AND PAR.SubcontractorID = COALESCE ( @SubcontractorID, PAR.SubcontractorID )
+		AND PAR.Password = COALESCE ( @Password, PAR.Password )
+END

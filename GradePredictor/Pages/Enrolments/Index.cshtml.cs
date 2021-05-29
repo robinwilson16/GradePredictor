@@ -7,9 +7,11 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using GradePredictor.Data;
 using GradePredictor.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace GradePredictor.Pages.Enrolments
 {
+    [Authorize(Roles = "Admin,BMIS,Subcontractor")]
     public class IndexModel : PageModel
     {
         private readonly GradePredictor.Data.ApplicationDbContext _context;

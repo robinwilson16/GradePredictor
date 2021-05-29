@@ -7,9 +7,11 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using GradePredictor.Data;
 using GradePredictor.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace GradePredictor.Pages.Courses
 {
+    [Authorize(Roles = "Admin,BMIS,Subcontractor")]
     public class CreateModel : PageModel
     {
         private readonly GradePredictor.Data.ApplicationDbContext _context;

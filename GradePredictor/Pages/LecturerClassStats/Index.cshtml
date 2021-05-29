@@ -1,0 +1,48 @@
+﻿@page
+@model GradePredictor.Pages.LecturerClassStats.IndexModel
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Index</h1>
+
+<p>
+    <a asp-page="Create">Create New</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.LecturerClassStat[0].Courses)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.LecturerClassStat[0].Groups)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.LecturerClassStat[0].Classes)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model.LecturerClassStat) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.Courses)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Groups)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Classes)
+            </td>
+            <td>
+                <a asp-page="./Edit" asp-route-id="@item.LecturerClassStatID">Edit</a> |
+                <a asp-page="./Details" asp-route-id="@item.LecturerClassStatID">Details</a> |
+                <a asp-page="./Delete" asp-route-id="@item.LecturerClassStatID">Delete</a>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>

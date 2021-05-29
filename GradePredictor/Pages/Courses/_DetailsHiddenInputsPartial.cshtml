@@ -1,6 +1,9 @@
 ﻿<input type="hidden" id="RootPath" />
 <input type="hidden" id="UserID" value="@User.Identity.Name.Split('\\').Last()" />
 <input type="hidden" id="AcademicYearID" value="@Model.AcademicYearID" />
+<input type="hidden" id="CollegeGroupID" value="@Model.Course.CollegeCode" />
+<input type="hidden" id="FacID" value="@Model.Course.FacCode" />
+<input type="hidden" id="TeamID" value="@Model.Course.TeamCode" />
 <input type="hidden" id="CourseCodeID" value="@Model.Course.CourseCode" />
 <input type="hidden" id="GroupCodeID" value="@Model.Course.GroupCode" />
 <input type="hidden" id="FormTitleID" />
@@ -8,3 +11,4 @@
 <input type="hidden" id="PredictedGradeLookupTypeID" value="@Model.Course.PredictedGradeLookupType" />
 <input type="hidden" id="HasUnsavedChangesID" value="N" />
 <input type="hidden" id="QuestionModalAnswerID" />
+<input type="hidden" id="DataModeID" value="@Model.DataModeID" />

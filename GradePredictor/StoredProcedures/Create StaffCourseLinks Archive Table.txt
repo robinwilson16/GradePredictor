@@ -1,0 +1,200 @@
+	DECLARE @AcademicYear VARCHAR(5) = '20/21'
+	
+	DROP TABLE IF EXISTS #RegOfferings
+	SELECT DISTINCT --Offerings attached to registers used for grouping Func Skills and ESOL
+		REG.RegisterID,
+		REG.RegisterNo,
+		REG.StartDate,
+		REG.EndDate,
+		OfferingGroups = 
+			STUFF (
+				(
+					SELECT
+						', ' + CAST ( REGC.OfferingGroupID AS VARCHAR(50) )
+					FROM ProSolution.dbo.Register REG2
+					INNER JOIN ProSolution.dbo.RegisterCourse REGC
+						ON REGC.RegisterID = REG2.RegisterID
+					INNER JOIN ProSolution.dbo.Offering CRS
+						ON CRS.OfferingID = REGC.OfferingID
+					INNER JOIN ProSolution.dbo.OfferingStatus STA
+						ON STA.OfferingStatusID = CRS.OfferingStatusID
+					LEFT JOIN ProSolution.dbo.Learning_AIM AIM
+						ON AIM.LEARNING_AIM_REF = CRS.QualID
+					WHERE
+						REG2.RegisterNo = REG.RegisterNo
+						AND STA.CanTimetable = 1
+						AND (
+							( --Eng or Maths
+								COALESCE ( AIM.LEARNING_AIM_TYPE_CODE, '0000' ) IN (
+									'0003',--GCSE
+									'1439'--Func Skills
+								)
+								AND (
+									COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%English%'
+									OR COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%Math%'
+								)
+							)
+							OR ( --ESOL
+								COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%ESOL%'
+								OR COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%Foundations for Learning and Life'
+								OR COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%Preparation for Work,%'
+							)
+						)
+					ORDER BY
+						', ' + CAST ( REGC.OfferingGroupID AS VARCHAR(50) )
+					FOR XML PATH(''),
+					TYPE
+				).value('.','varchar(max)'), 1, 2, ''
+
+			),
+		CourseType = 
+			CASE
+				WHEN AIM.LEARNING_AIM_TYPE_CODE = '0003' THEN 'GCSE'
+				WHEN AIM.LEARNING_AIM_TYPE_CODE = '1439' THEN 'FSL' + AIM.NVQLevelID_v2
+				WHEN COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%ESOL%' 
+					OR COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%Foundations for Learning and Life' 
+					OR COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%Preparation for Work,%'
+					THEN 
+						CASE 
+							WHEN CRS.Name LIKE '%1618%' THEN 'ESOLFQ'
+							ELSE 'ESOL'
+						END
+				ELSE 'ERROR'
+			END
+		INTO #RegOfferings
+	FROM ProSolution.dbo.Register REG
+	INNER JOIN ProSolution.dbo.RegisterCourse REGC
+		ON REGC.RegisterID = REG.RegisterID
+	INNER JOIN ProSolution.dbo.Offering CRS
+		ON CRS.OfferingID = REGC.OfferingID
+	INNER JOIN ProSolution.dbo.Learning_Aim AIM
+		ON AIM.LEARNING_AIM_REF = CRS.QualID
+	WHERE
+		REG.AcademicYearID = @AcademicYear
+
+	ALTER TABLE #RegOfferings
+	ALTER COLUMN CourseType VARCHAR(50) NOT NULL
+
+	ALTER TABLE #RegOfferings
+	ADD PRIMARY KEY ( RegisterID, CourseType )
+
+	DROP TABLE IF EXISTS WLC.dbo.GPR_StaffCourseLinks
+
+	--Teaching staff
+	SELECT DISTINCT
+		LinkID = CAST ( CRS.OfferingID AS VARCHAR(50) ) + '-' + CAST ( COALESCE ( GRP.OfferingGroupID, 0 ) AS VARCHAR(50) ),
+		StaffID = STF.StaffID,
+		StaffRef = STF.StaffRefNo,
+		Username = SU.UserName,
+		StaffName = STF.StaffRefNo + ' - ' + STF.FirstName + ' ' + STF.Surname,
+		StaffType = 'Teacher',
+		LinkType = 'Course'
+		INTO WLC.dbo.GPR_StaffCourseLinks
+	FROM ProSolution.dbo.Offering CRS
+	INNER JOIN ProSolution.dbo.RegisterCourse REGC
+		ON REGC.OfferingID = CRS.OfferingID
+	INNER JOIN ProSolution.dbo.Register REG
+		ON REG.RegisterID = REGC.RegisterID
+	INNER JOIN ProSolution.dbo.RegisterSchedule REGSC
+		ON REGSC.RegisterID = REG.RegisterID
+	INNER JOIN ProSolution.dbo.RegisterScheduleLecturer REGSCL
+		ON REGSCL.RegisterScheduleID = REGSC.RegisterScheduleID
+	INNER JOIN ProSolution.dbo.RegisterLecturer REGL
+		ON REGL.RegisterLecturerID = REGSCL.RegisterLecturerID
+	INNER JOIN ProSolution.dbo.Staff STF
+		ON STF.StaffID = REGL.StaffID
+	INNER JOIN ProSolution.dbo._CCC_SystemUser SU
+		ON SU.SystemUserID = STF.SystemUserID
+	LEFT JOIN ProSolution.dbo.OfferingGroup GRP
+		ON GRP.OfferingGroupID = REGC.OfferingGroupID
+	WHERE
+		CRS.AcademicYearID = @AcademicYear
+
+	UNION ALL
+
+	SELECT DISTINCT
+		LinkID = CAST ( CRS.OfferingID AS VARCHAR(50) ) + '-' + CAST ( COALESCE ( GRP.OfferingGroupID, 0 ) AS VARCHAR(50) ),
+		StaffID = PAR.OrganisationID,
+		StaffRef = PAR.UKPRN,
+		Username = PAR.UKPRN,
+		StaffName = PAR.UKPRN + ' - ' + PAR.Name,
+		StaffType = 'Subcontractor',
+		LinkType = 'Course'
+	FROM ProSolution.dbo.StudentDetail SD
+	INNER JOIN ProSolution.dbo.Enrolment ENR
+		ON ENR.StudentDetailID = SD.StudentDetailID
+	INNER JOIN ProSolution.dbo.Offering CRS
+		ON CRS.OfferingID = ENR.OfferingID
+	INNER JOIN ProSolution.dbo.Organisation PAR
+		ON PAR.OrganisationID = ENR.FranchisingPartnerID
+	LEFT JOIN ProSolution.dbo.OfferingGroup GRP
+		ON GRP.OfferingGroupID = ENR.OfferingGroupID
+	WHERE
+		SD.AcademicYearID = @AcademicYear
+		AND ENR.CompletionStatusID IN ( '1', '2', '3' )
+		AND PAR.UKPRN IS NOT NULL
+
+	UNION ALL
+
+	SELECT DISTINCT
+		LinkID = REGO.OfferingGroups,
+		StaffID = STF.StaffID,
+		StaffRef = STF.StaffRefNo,
+		Username = SU.UserName,
+		StaffName = STF.StaffRefNo + ' - ' + STF.FirstName + ' ' + STF.Surname,
+		StaffType = 'Teacher',
+		LinkType = 'Register'
+	FROM ProSolution.dbo.Offering CRS
+	INNER JOIN ProSolution.dbo.RegisterCourse REGC
+		ON REGC.OfferingID = CRS.OfferingID
+	INNER JOIN ProSolution.dbo.Register REG
+		ON REG.RegisterID = REGC.RegisterID
+	INNER JOIN #RegOfferings REGO
+		ON REGO.RegisterID = REG.RegisterID
+	INNER JOIN ProSolution.dbo.RegisterSchedule REGSC
+		ON REGSC.RegisterID = REG.RegisterID
+	INNER JOIN ProSolution.dbo.RegisterScheduleLecturer REGSCL
+		ON REGSCL.RegisterScheduleID = REGSC.RegisterScheduleID
+	INNER JOIN ProSolution.dbo.RegisterLecturer REGL
+		ON REGL.RegisterLecturerID = REGSCL.RegisterLecturerID
+	INNER JOIN ProSolution.dbo.Staff STF
+		ON STF.StaffID = REGL.StaffID
+	INNER JOIN ProSolution.dbo._CCC_SystemUser SU
+		ON SU.SystemUserID = STF.SystemUserID
+	LEFT JOIN ProSolution.dbo.OfferingGroup GRP
+		ON GRP.OfferingGroupID = REGC.OfferingGroupID
+	WHERE
+		CRS.AcademicYearID = @AcademicYear
+		AND REGO.CourseType <> 'OTHER'
+
+	UNION ALL
+
+	SELECT DISTINCT
+		LinkID = REGO.OfferingGroups,
+		StaffID = PAR.OrganisationID,
+		StaffRef = PAR.UKPRN,
+		Username = PAR.UKPRN,
+		StaffName = PAR.UKPRN + ' - ' + PAR.Name,
+		StaffType = 'Subcontractor',
+		LinkType = 'Register'
+	FROM ProSolution.dbo.StudentDetail SD
+	INNER JOIN ProSolution.dbo.Enrolment ENR
+		ON ENR.StudentDetailID = SD.StudentDetailID
+	INNER JOIN ProSolution.dbo.Offering CRS
+		ON CRS.OfferingID = ENR.OfferingID
+	INNER JOIN ProSolution.dbo.RegisterCourse REGC
+		ON REGC.OfferingID = CRS.OfferingID
+	INNER JOIN ProSolution.dbo.Register REG
+		ON REG.RegisterID = REGC.RegisterID
+	INNER JOIN #RegOfferings REGO
+		ON REGO.RegisterID = REG.RegisterID
+	INNER JOIN ProSolution.dbo.Organisation PAR
+		ON PAR.OrganisationID = ENR.FranchisingPartnerID
+	LEFT JOIN ProSolution.dbo.OfferingGroup GRP
+		ON GRP.OfferingGroupID = ENR.OfferingGroupID
+	WHERE
+		SD.AcademicYearID = @AcademicYear
+		AND ENR.CompletionStatusID IN ( '1', '2', '3' )
+		AND PAR.UKPRN IS NOT NULL
+		AND REGO.CourseType <> 'OTHER'
+		--AND PAR.UKPRN = @Username

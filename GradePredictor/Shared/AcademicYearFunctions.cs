@@ -19,7 +19,7 @@ namespace GradePredictor.Shared
             {
                 //Get value from database
                 ConfigData = (await _context.Config
-                    .FromSqlInterpolated($"EXEC SPR_ETG_Config")
+                    .FromSqlInterpolated($"EXEC SPR_GRA_Config")
                     .ToListAsync())
                     .FirstOrDefault();
 

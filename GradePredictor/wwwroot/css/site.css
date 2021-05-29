@@ -103,6 +103,53 @@ textarea.form-control {
     height: 200px;
 }
 
+/*Columns menu*/
+.dt-button-collection ul.dropdown-menu {
+    top: -300px !important;
+    height: 300px !important;
+    overflow-y: scroll;
+}
+
+.dt-button-collection ul.dropdown-menu li a:link,
+.dt-button-collection ul.dropdown-menu li a:active,
+.dt-button-collection ul.dropdown-menu li a:visited {
+    background-color: #6c757d;
+    color: #ffffff;
+    display: block;
+    margin: 4px;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.dt-button-collection ul.dropdown-menu li a:hover {
+    background-color: #6c757d;
+    color: #ffffff;
+    display: block;
+    margin: 4px;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.dt-button-collection ul.dropdown-menu li.active a:link,
+.dt-button-collection ul.dropdown-menu li.active a:active,
+.dt-button-collection ul.dropdown-menu li.active a:visited {
+    background-color: #007bff;
+    color: #ffffff;
+    display: block;
+    margin: 4px;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.dt-button-collection ul.dropdown-menu li.active a:hover {
+    background-color: #007bff;
+    color: #ffffff;
+    display: block;
+    margin: 4px;
+    padding: 4px;
+    border-radius: 4px;
+}
+
 .contColumn {
     background-color: #ffff99;
 }
@@ -171,4 +218,80 @@ textarea.form-control {
     text-align: center;
     font-weight: bold;
     top: 2px;
+}
+
+.Dark {
+    background-color: #353a40;
+    color: #ffffff;
+}
+
+@media (min-width: 576px) {
+    .LoginBox {
+        margin-top: -100px;
+    }
+}
+
+@media (min-width: 768px) {
+    .LoginBox {
+        margin-top: -100px;
+    }
+}
+
+@media (min-width: 992px) {
+    .LoginBox {
+        margin-top: -300px;
+    }
+}
+
+@media (min-width: 1100px) {
+    .LoginBox {
+        margin-top: -400px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .LoginBox {
+        margin-top: -650px;
+    }
+}
+
+@media (min-width: 1500px) {
+    .LoginBox {
+        margin-top: -800px;
+    }
+}
+
+@media (min-width: 1700px) {
+    .LoginBox {
+        margin-top: -900px;
+    }
+}
+
+.LoginBox .card h3.card-title {
+    margin: 20px;
+}
+
+.LoginBox .text-danger span {
+    background-color: #f8d7da;
+    border: 1px solid #f5c2c7;
+    padding: 2px;
+    border-radius: 4px;
+    display: block;
+    margin-top: 2px;
+}
+
+.LoginBox .validation-summary-errors {
+    background-color: #f8d7da;
+    border: 1px solid #f5c2c7;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    padding-bottom: -10px;
+}
+
+.card-title {
+    font-family: 'Exo 2', sans-serif;
+    background-color: #ffffff;
+    color: #353a40;
+    border-radius: 6px;
+    padding: 6px;
 }

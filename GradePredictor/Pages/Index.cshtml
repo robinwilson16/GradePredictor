@@ -1,6 +1,7 @@
-﻿@page
+﻿@page "{academicYear?}/{collegeGroup?}/{fac?}/{team?}"
 @model IndexModel
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Xsrf
+@using GradePredictor.Extensions
 @{
     ViewData["Title"] = "Home page";
 }
@@ -19,26 +20,32 @@
                 <form id="SearchForm">
                     <div class="row">
                         <div class="col-md">
-                            <div class="form-group row">
-                                <label for="CourseSearchID" class="col-sm-4 col-form-label"><i class="fas fa-search"></i> Course Search</label>
-                                <div class="col-sm-8">
-                                    <input id="CourseSearchID" name="CourseSearch" class="form-control" />
+                            @if (User.IsInRole("Admin") || User.IsInRole("BMIS"))
+                            {
+                                <div class="form-group row">
+                                    <label for="CourseSearchID" class="col-sm-4 col-form-label"><i class="fas fa-search"></i> Course Search</label>
+                                    <div class="col-sm-8">
+                                        <input id="CourseSearchID" name="CourseSearch" class="form-control" />
+                                    </div>
                                 </div>
-                            </div>
+                            }
                         </div>
                         <div class="col-md">
-                            <div class="form-group row">
-                                <label for="UserSearchID" class="col-sm-4 col-form-label"><i class="fas fa-chalkboard-teacher"></i> Staff Search</label>
-                                <div class="col-sm-8">
-                                    <input id="StaffSearchID" name="StaffSearch" type="text" list="StaffList" class="form-control" placeholder="Please Type/Select Staff Member..." />
-                                    <datalist id="StaffList">
-                                        @foreach (var staff in Model.Staff)
-                                        {
-                                            @:<option value="@staff.StaffRef" label="👤 @staff.Forename @staff.Surname (@staff.StaffRef)"></option>
-                                        }
-                                    </datalist>
+                            @if (User.IsInRole("Admin") || User.IsInRole("BMIS"))
+                            {
+                                <div class="form-group row">
+                                    <label for="UserSearchID" class="col-sm-4 col-form-label"><i class="fas fa-chalkboard-teacher"></i> Staff Search</label>
+                                    <div class="col-sm-8">
+                                        <input id="StaffSearchID" name="StaffSearch" type="text" list="StaffList" class="form-control" placeholder="Please Type/Select Staff Member..." />
+                                        <datalist id="StaffList">
+                                            @foreach (var staff in Model.Staff)
+                                            {
+                                                @:<option value="@staff.StaffRef" label="👤 @staff.Forename @staff.Surname (@staff.StaffRef)"></option>
+                                            }
+                                        </datalist>
+                                    </div>
                                 </div>
-                            </div>
+                            }
                         </div>
                         <div class="col-md">
 
@@ -51,6 +58,24 @@
                         </div>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md">
+            <div class="alert alert-secondary" role="alert">
+                <div class="row">
+                    <div id="FolderPathLinks" class="col-md">
+                        <i class="fas fa-folder-open"></i> <a class="alert-link" href="/" title="Go home">WLC</a>
+                    </div>
+                    <div class="col-md-3 text-right">
+                        All Courses&nbsp;
+                        <div class="custom-control custom-switch d-inline">
+                            <input type="checkbox" class="custom-control-input" id="CoursesITeachID" checked>
+                            <label class="custom-control-label" for="CoursesITeachID">Courses I Teach</label>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

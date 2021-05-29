@@ -1,7 +1,10 @@
-﻿<input type="hidden" id="RootPath" />
-<input type="hidden" id="UserID" value="@User.Identity.Name.Split('\\').Last()" />
+﻿@using GradePredictor.Extensions
+
+<input type="hidden" id="RootPath" />
+<input type="hidden" id="UserID" value="@Model.AppUserID" />
 <input type="hidden" id="AcademicYearID" value="@Model.AcademicYearID" />
-<input type="hidden" id="StructureLevelID" />
-<input type="hidden" id="CollegeGroupID" />
-<input type="hidden" id="FacID" />
-<input type="hidden" id="TeamID" />
+<input type="hidden" id="StructureLevelID" value="@Model.StructureLevelID" />
+<input type="hidden" id="CollegeGroupID" value="@Model.CollegeGroupID" />
+<input type="hidden" id="FacID" value="@Model.FacID" />
+<input type="hidden" id="TeamID" value="@Model.TeamID" />
+<input type="hidden" id="DataModeID" value="@Model.DataModeID" />

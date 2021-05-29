@@ -1,0 +1,155 @@
+CREATE PROCEDURE [dbo].[SPR_GPR_CourseList_Static]
+	@AcademicYear NVARCHAR(5),
+    @Username NVARCHAR(50),
+	@CoursesITeach BIT,
+	@CourseCode NVARCHAR(50),
+	@GroupCode NVARCHAR(50),
+	@CollegeGroup NVARCHAR(50),
+	@Fac NVARCHAR(50),
+	@Team NVARCHAR(50),
+	@CourseSearch NVARCHAR(255),
+	@StaffSearch NVARCHAR(255)
+AS
+BEGIN
+	SET XACT_ABORT, NOCOUNT ON;
+
+	SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+	
+	--DECLARE @AcademicYear VARCHAR(5) = '20/21'
+	--DECLARE @Username VARCHAR(100) = 'r.wilson2'
+	--DECLARE @CoursesITeach BIT = 0;
+	--DECLARE @CourseCode NVARCHAR(50) = NULL
+	--DECLARE @GroupCode NVARCHAR(255) = NULL
+	--DECLARE @CollegeGroup NVARCHAR(50) = NULL
+	--DECLARE @Fac NVARCHAR(50) = NULL
+	--DECLARE @Team NVARCHAR(50) = NULL
+	--DECLARE @CourseSearch NVARCHAR(255) = NULL
+	--DECLARE @StaffSearch NVARCHAR(255) = NULL
+
+	IF @CourseSearch IS NULL
+	BEGIN
+		SET @CourseSearch = ''
+	END
+
+	IF @StaffSearch IS NULL
+	BEGIN
+		SET @StaffSearch = ''
+	END
+
+	IF @GroupCode = '0'
+	BEGIN
+		SET @GroupCode = NULL
+	END
+
+	SELECT
+		CourseID = CRS.CourseID,
+		CollegeCode = CRS.CollegeCode,
+		CollegeName = CRS.CollegeName,
+		SiteCode = CRS.SiteCode,
+		SiteName = CRS.SiteName,
+		FacCode = CRS.FacCode,
+		FacName = CRS.FacName,
+		TeamCode = CRS.TeamCode,
+		TeamName = CRS.TeamName,
+		CourseCode = CRS.CourseCode,
+		CourseTitle = CRS.CourseTitle,
+		CourseTitleShort = CRS.CourseTitleShort,
+		GroupCode = CRS.GroupCode,
+		StartDate = CRS.StartDate,
+		EndDate = CRS.EndDate,
+		AimCode = CRS.AimCode,
+		AimTitle = CRS.AimTitle,
+		AimTypeCode = CRS.AimTypeCode,
+		AimTypeName = CRS.AimTypeName,
+		MainLecturerCode = CRS.MainLecturerCode,
+		MainLecturerSurname = CRS.MainLecturerSurname,
+		MainLecturerForename = CRS.MainLecturerForename,
+		AttendPossible = CRS.AttendPossible,
+		AttendPresent = CRS.AttendPresent,
+		AttendPer = CRS.AttendPer,
+		AttendRate = CRS.AttendRate,
+		ContEnrols = CRS.ContEnrols,
+		PredictedGradeLookupType = CRS.PredictedGradeLookupType,
+		PredictionsCompletedNum = CRS.PredictionsCompletedNum,
+		PredictionsCompletedPer = CRS.PredictionsCompletedPer,
+		PredictedToAchieveNum = CRS.PredictedToAchieveNum,
+		PredictedToAchievePer = CRS.PredictedToAchievePer,
+		PredictedToAchieveHighNum = CRS.PredictedToAchieveHighNum,
+		PredictedToAchieveHighPer = CRS.PredictedToAchieveHighPer
+	FROM GPR_CourseList CRS
+	LEFT JOIN (
+		SELECT
+			SC.LinkID
+		FROM GPR_StaffCourseLinks SC
+		WHERE
+			SC.Username = @Username
+	) STFL
+		ON STFL.LinkID = CRS.CourseID
+	LEFT JOIN (
+		SELECT
+			Courses = COUNT ( SC.LinkID )
+		FROM GPR_StaffCourseLinks SC
+		WHERE
+			SC.Username = @Username
+	) STF
+		ON 1 = 1
+	LEFT JOIN (
+		SELECT DISTINCT
+			SC.LinkID
+		FROM GPR_StaffCourseLinks SC
+		WHERE
+			SC.StaffName LIKE '%' + @StaffSearch + '%' 
+	) STFS
+		ON STFS.LinkID = CRS.CourseID
+	WHERE
+		( CRS.CollegeCode = COALESCE ( @CollegeGroup, CRS.CollegeCode ) OR @CollegeGroup = 'ALL' )
+		AND ( CRS.FacCode = COALESCE ( @Fac, CRS.FacCode ) OR @Fac = 'ALL' )
+		AND ( CRS.TeamCode = COALESCE ( @Team, CRS.TeamCode ) OR @Team = 'ALL' )
+		AND
+			CASE
+				WHEN @CourseCode IS NOT NULL AND @GroupCode IS NOT NULL THEN 
+					CASE
+						WHEN 
+							CRS.CourseCode = @CourseCode
+							AND CRS.GroupCode = @GroupCode
+							THEN 1
+						ELSE 0
+					END
+				WHEN @CourseCode IS NOT NULL THEN 
+					CASE
+						WHEN 
+							CRS.CourseCode = @CourseCode
+							THEN 1
+						ELSE 0
+					END
+				WHEN LEN ( @CourseSearch ) + LEN ( @StaffSearch ) > 0 THEN 
+					CASE
+						WHEN 
+							CRS.CourseCode + ' - ' + CRS.CourseTitle LIKE '%' + @CourseSearch + '%' 
+							AND 
+								CASE
+									WHEN LEN ( @StaffSearch ) > 0 THEN
+										CASE
+											WHEN STFS.LinkID = CRS.CourseID THEN 1
+											ELSE 0
+										END
+									ELSE 1
+								END = 1
+							THEN 1
+						ELSE 0
+					END
+				ELSE
+					CASE
+						WHEN STF.Courses > 0 THEN 
+							CASE
+								WHEN @CoursesITeach = 0 THEN 1
+								WHEN STFL.LinkID = CRS.CourseID THEN 1
+								ELSE 0
+							END
+						ELSE 1
+					END
+			END = 1
+	ORDER BY
+		CRS.CourseCode,
+		CRS.GroupCode
+END

@@ -1,0 +1,1621 @@
+CREATE PROCEDURE [dbo].[SPR_GPR_CollegeStructureList_MathsEng]
+	@AcademicYear NVARCHAR(5),
+    @Username NVARCHAR(50),
+	@CoursesITeach BIT,
+	@CourseCode NVARCHAR(50),
+	@GroupCode NVARCHAR(50),
+	@CollegeGroup NVARCHAR(50),
+	@Fac NVARCHAR(50),
+	@Team NVARCHAR(50),
+	@CourseSearch NVARCHAR(255),
+	@StaffSearch NVARCHAR(255),
+	@StructureLevel INT
+AS
+BEGIN
+	SET XACT_ABORT, NOCOUNT ON;
+
+	SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+
+	--DECLARE @AcademicYear VARCHAR(5) = '20/21'
+	--DECLARE @Username VARCHAR(100) = 'r.wilson2'
+	--DECLARE @CoursesITeach BIT = 1;
+	--DECLARE @CourseCode NVARCHAR(50) = NULL
+	--DECLARE @GroupCode NVARCHAR(255) = NULL
+	--DECLARE @CollegeGroup NVARCHAR(50) = NULL
+	--DECLARE @Fac NVARCHAR(50) = NULL
+	--DECLARE @Team NVARCHAR(50) = NULL
+	--DECLARE @CourseSearch NVARCHAR(255) = NULL
+	--DECLARE @StaffSearch NVARCHAR(255) = NULL
+	--DECLARE @StructureLevel INT = 1
+
+	IF @CourseSearch IS NULL
+	BEGIN
+		SET @CourseSearch = ''
+	END
+
+	IF @StaffSearch IS NULL
+	BEGIN
+		SET @StaffSearch = ''
+	END
+
+	DROP TABLE IF EXISTS #RegOfferings
+	SELECT DISTINCT --Offerings attached to registers used for grouping Func Skills and ESOL
+		REG.RegisterID,
+		REG.RegisterNo,
+		REG.StartDate,
+		REG.EndDate,
+		OfferingGroups = 
+			STUFF (
+				(
+					SELECT
+						', ' + CAST ( REGC.OfferingGroupID AS VARCHAR(50) )
+					FROM ProSolution.dbo.Register REG2
+					INNER JOIN ProSolution.dbo.RegisterCourse REGC
+						ON REGC.RegisterID = REG2.RegisterID
+					INNER JOIN ProSolution.dbo.Offering CRS
+						ON CRS.OfferingID = REGC.OfferingID
+					INNER JOIN ProSolution.dbo.OfferingStatus STA
+						ON STA.OfferingStatusID = CRS.OfferingStatusID
+					LEFT JOIN ProSolution.dbo.Learning_AIM AIM
+						ON AIM.LEARNING_AIM_REF = CRS.QualID
+					WHERE
+						REG2.RegisterNo = REG.RegisterNo
+						AND STA.CanTimetable = 1
+						AND (
+							( --Eng or Maths
+								COALESCE ( AIM.LEARNING_AIM_TYPE_CODE, '0000' ) IN (
+									'0003',--GCSE
+									'1439'--Func Skills
+								)
+								AND (
+									COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%English%'
+									OR COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%Math%'
+								)
+							)
+							OR ( --ESOL
+								COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%ESOL%'
+								OR COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%Foundations for Learning and Life'
+								OR COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%Preparation for Work,%'
+							)
+						)
+					ORDER BY
+						', ' + CAST ( REGC.OfferingGroupID AS VARCHAR(50) )
+					FOR XML PATH(''),
+					TYPE
+				).value('.','varchar(max)'), 1, 2, ''
+
+			),
+		CourseType = 
+			CASE
+				WHEN AIM.LEARNING_AIM_TYPE_CODE = '0003' THEN 'GCSE'
+				WHEN AIM.LEARNING_AIM_TYPE_CODE = '1439' THEN 'FSL' + AIM.NVQLevelID_v2
+				WHEN COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%ESOL%' 
+					OR COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%Foundations for Learning and Life' 
+					OR COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%Preparation for Work,%'
+					THEN 
+						CASE 
+							WHEN CRS.Name LIKE '%1618%' THEN 'ESOLFQ'
+							ELSE 'ESOL'
+						END
+				ELSE 'ERROR'
+			END
+		INTO #RegOfferings
+	FROM ProSolution.dbo.Register REG
+	INNER JOIN ProSolution.dbo.RegisterCourse REGC
+		ON REGC.RegisterID = REG.RegisterID
+	INNER JOIN ProSolution.dbo.Offering CRS
+		ON CRS.OfferingID = REGC.OfferingID
+	INNER JOIN ProSolution.dbo.Learning_Aim AIM
+		ON AIM.LEARNING_AIM_REF = CRS.QualID
+	WHERE
+		REG.AcademicYearID = @AcademicYear
+
+
+
+	ALTER TABLE #RegOfferings
+	ALTER COLUMN CourseType VARCHAR(50) NOT NULL
+
+	ALTER TABLE #RegOfferings
+	ADD PRIMARY KEY ( RegisterID, CourseType )
+
+
+	DROP TABLE IF EXISTS #Attend
+	SELECT
+		OfferingID = CRS.OfferingID,
+		OfferingGroupID = COALESCE ( GRP.OfferingGroupID, 0 ),
+		Possible = SUM ( CASE WHEN COALESCE ( MTS.MarkTypeStatusID, 2 ) <> 2 AND CAST ( RSES.Date AS DATE ) <= CAST ( GETDATE() AS DATE ) THEN 1 ELSE 0 END ),
+		Present = SUM ( CASE WHEN MTS.MarkTypeStatusID = 1 THEN 1 ELSE 0 END ),
+		Absent = SUM ( CASE WHEN MTS.MarkTypeStatusID = 0 THEN 1 ELSE 0 END ),
+		Neutral = SUM ( CASE WHEN MTS.MarkTypeStatusID = 2 THEN 1 ELSE 0 END ),
+		AuthAbsence = SUM ( CASE WHEN MT.IsAuthorisedAbsence = 1 THEN 1 ELSE 0 END ),
+		Late = SUM ( CASE WHEN MT.IsLate = 1 THEN 1 ELSE 0 END ),
+		AttendPer = 
+			ROUND ( 
+				CASE
+					WHEN SUM ( CASE WHEN COALESCE ( MTS.MarkTypeStatusID, 2 ) <> 2 AND CAST ( RSES.Date AS DATE ) <= CAST ( GETDATE() AS DATE ) THEN 1 ELSE 0 END ) = 0 THEN 0
+					ELSE
+						CAST ( SUM ( CASE WHEN MTS.MarkTypeStatusID = 1 THEN 1 ELSE 0 END ) AS FLOAT )
+						/
+						CAST ( SUM ( CASE WHEN COALESCE ( MTS.MarkTypeStatusID, 2 ) <> 2 AND CAST ( RSES.Date AS DATE ) <= CAST ( GETDATE() AS DATE ) THEN 1 ELSE 0 END ) AS FLOAT )
+				END
+			, 3 ),
+		PunctPer = 
+			ROUND ( 
+				CASE
+					WHEN SUM ( CASE WHEN MTS.MarkTypeStatusID = 1 THEN 1 ELSE 0 END ) = 0 THEN 0
+					ELSE
+						1 - (
+							CAST ( SUM ( CASE WHEN MT.IsLate = 1 THEN 1 ELSE 0 END ) AS FLOAT )
+							/
+							CAST ( SUM ( CASE WHEN MTS.MarkTypeStatusID = 1 THEN 1 ELSE 0 END ) AS FLOAT )
+						)
+				END
+			, 3 )
+		INTO #Attend
+	FROM ProSolution.dbo.StudentDetail SD
+	INNER JOIN ProSolution.dbo.Enrolment ENR
+		ON ENR.StudentDetailID = SD.StudentDetailID
+	INNER JOIN ProSolution.dbo.Offering CRS
+		ON CRS.OfferingID = ENR.OfferingID
+	INNER JOIN ProSolution.dbo.RegisterStudent REGS
+		ON REGS.EnrolmentID = ENR.EnrolmentID
+	INNER JOIN ProSolution.dbo.Register REG
+		ON REG.RegisterID = REGS.RegisterID
+	INNER JOIN (
+		SELECT
+			RegisterID = REG.RegisterID,
+			RegisterScheduleID = REGSC.RegisterScheduleID,
+			RegisterSessionID = RSES.RegisterSessionID,
+			Date = REGSC.Date,
+			StartTime = REGSC.StartTime,
+			EndTime = REGSC.EndTime,
+			Duration = REGSC.Duration
+		FROM ProSolution.dbo.Register REG
+		INNER JOIN ProSolution.dbo.RegisterSchedule REGSC
+			ON REGSC.RegisterID = REG.RegisterID
+		LEFT JOIN ProSolution.dbo.RegisterSession RSES
+			ON RSES.RegisterID = REG.RegisterID
+			AND RSES.Date = REGSC.Date
+			AND RSES.StartTime = REGSC.StartTime
+			AND RSES.EndTime = REGSC.EndTime
+		WHERE
+			REG.AcademicYearID = @AcademicYear
+
+		UNION
+
+		SELECT
+			RegisterID = RSES.RegisterID,
+			RegisterScheduleID = REGSC.RegisterScheduleID,
+			RegisterSessionID = RSES.RegisterSessionID,
+			Date = RSES.Date,
+			StartTime = RSES.StartTime,
+			EndTime = RSES.EndTime,
+			Duration = RSES.Duration
+		FROM ProSolution.dbo.Register REG
+		INNER JOIN ProSolution.dbo.RegisterSession RSES
+			ON RSES.RegisterID = REG.RegisterID
+		LEFT JOIN ProSolution.dbo.RegisterSchedule REGSC
+			ON REGSC.RegisterID = REG.RegisterID
+			AND REGSC.Date = RSES.Date
+			AND REGSC.StartTime = RSES.StartTime
+			AND REGSC.EndTime = RSES.EndTime
+		WHERE
+			REG.AcademicYearID = @AcademicYear
+	) RSES
+		ON RSES.RegisterID = REG.RegisterID
+	LEFT JOIN ProSolution.dbo.RegisterMark AS RM 
+		ON RM.RegisterSessionID = RSES.RegisterSessionID
+		AND RM.RegisterStudentID = REGS.RegisterStudentID
+	LEFT JOIN ProSolution.dbo.MarkType AS MT 
+		ON MT.MarkTypeID = RM.MarkTypeID
+	LEFT JOIN ProSolution.dbo.MarkTypeStatus MTS
+		ON MTS.MarkTypeStatusID = MT.MarkTypeStatusID
+	LEFT JOIN ProSolution.dbo.OfferingGroup GRP
+		ON GRP.OfferingGroupID = ENR.OfferingGroupID
+	WHERE
+		SD.AcademicYearID = @AcademicYear
+	GROUP BY
+		CRS.OfferingID,
+		COALESCE ( GRP.OfferingGroupID, 0 )
+
+	
+	DROP TABLE IF EXISTS #AttendReg
+	SELECT
+		REGO.OfferingGroups,
+		CourseType = 
+			CASE
+				WHEN AIM.LEARNING_AIM_TYPE_CODE = '0003' THEN 'GCSE'
+				WHEN AIM.LEARNING_AIM_TYPE_CODE = '1439' THEN 'FSL' + AIM.NVQLevelID_v2
+				WHEN COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%ESOL%' 
+					OR COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%Foundations for Learning and Life' 
+					OR COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%Preparation for Work,%'
+					THEN 
+						CASE 
+							WHEN CRS.Name LIKE '%1618%' THEN 'ESOLFQ'
+							ELSE 'ESOL'
+						END
+				ELSE 'ERROR'
+			END,
+		Possible = SUM ( CASE WHEN COALESCE ( MTS.MarkTypeStatusID, 2 ) <> 2 AND CAST ( RSES.Date AS DATE ) <= CAST ( GETDATE() AS DATE ) THEN 1 ELSE 0 END ),
+		Present = SUM ( CASE WHEN MTS.MarkTypeStatusID = 1 THEN 1 ELSE 0 END ),
+		Absent = SUM ( CASE WHEN MTS.MarkTypeStatusID = 0 THEN 1 ELSE 0 END ),
+		Neutral = SUM ( CASE WHEN MTS.MarkTypeStatusID = 2 THEN 1 ELSE 0 END ),
+		AuthAbsence = SUM ( CASE WHEN MT.IsAuthorisedAbsence = 1 THEN 1 ELSE 0 END ),
+		Late = SUM ( CASE WHEN MT.IsLate = 1 THEN 1 ELSE 0 END ),
+		AttendPer = 
+			ROUND ( 
+				CASE
+					WHEN SUM ( CASE WHEN COALESCE ( MTS.MarkTypeStatusID, 2 ) <> 2 AND CAST ( RSES.Date AS DATE ) <= CAST ( GETDATE() AS DATE ) THEN 1 ELSE 0 END ) = 0 THEN 0
+					ELSE
+						CAST ( SUM ( CASE WHEN MTS.MarkTypeStatusID = 1 THEN 1 ELSE 0 END ) AS FLOAT )
+						/
+						CAST ( SUM ( CASE WHEN COALESCE ( MTS.MarkTypeStatusID, 2 ) <> 2 AND CAST ( RSES.Date AS DATE ) <= CAST ( GETDATE() AS DATE ) THEN 1 ELSE 0 END ) AS FLOAT )
+				END
+			, 3 ),
+		PunctPer = 
+			ROUND ( 
+				CASE
+					WHEN SUM ( CASE WHEN MTS.MarkTypeStatusID = 1 THEN 1 ELSE 0 END ) = 0 THEN 0
+					ELSE
+						1 - (
+							CAST ( SUM ( CASE WHEN MT.IsLate = 1 THEN 1 ELSE 0 END ) AS FLOAT )
+							/
+							CAST ( SUM ( CASE WHEN MTS.MarkTypeStatusID = 1 THEN 1 ELSE 0 END ) AS FLOAT )
+						)
+				END
+			, 3 )
+		INTO #AttendReg
+	FROM ProSolution.dbo.StudentDetail SD
+	INNER JOIN ProSolution.dbo.Enrolment ENR
+		ON ENR.StudentDetailID = SD.StudentDetailID
+	INNER JOIN ProSolution.dbo.Offering CRS
+		ON CRS.OfferingID = ENR.OfferingID
+	INNER JOIN ProSolution.dbo.RegisterStudent REGS
+		ON REGS.EnrolmentID = ENR.EnrolmentID
+	INNER JOIN ProSolution.dbo.Register REG
+		ON REG.RegisterID = REGS.RegisterID
+	INNER JOIN #RegOfferings REGO
+		ON REGO.RegisterID = REG.RegisterID
+	INNER JOIN ProSolution.dbo.Learning_Aim AIM
+		ON AIM.LEARNING_AIM_REF = CRS.QualID
+	INNER JOIN (
+		SELECT
+			RegisterID = REG.RegisterID,
+			RegisterScheduleID = REGSC.RegisterScheduleID,
+			RegisterSessionID = RSES.RegisterSessionID,
+			Date = REGSC.Date,
+			StartTime = REGSC.StartTime,
+			EndTime = REGSC.EndTime,
+			Duration = REGSC.Duration
+		FROM ProSolution.dbo.Register REG
+		INNER JOIN ProSolution.dbo.RegisterSchedule REGSC
+			ON REGSC.RegisterID = REG.RegisterID
+		LEFT JOIN ProSolution.dbo.RegisterSession RSES
+			ON RSES.RegisterID = REG.RegisterID
+			AND RSES.Date = REGSC.Date
+			AND RSES.StartTime = REGSC.StartTime
+			AND RSES.EndTime = REGSC.EndTime
+		WHERE
+			REG.AcademicYearID = @AcademicYear
+
+		UNION
+
+		SELECT
+			RegisterID = RSES.RegisterID,
+			RegisterScheduleID = REGSC.RegisterScheduleID,
+			RegisterSessionID = RSES.RegisterSessionID,
+			Date = RSES.Date,
+			StartTime = RSES.StartTime,
+			EndTime = RSES.EndTime,
+			Duration = RSES.Duration
+		FROM ProSolution.dbo.Register REG
+		INNER JOIN ProSolution.dbo.RegisterSession RSES
+			ON RSES.RegisterID = REG.RegisterID
+		LEFT JOIN ProSolution.dbo.RegisterSchedule REGSC
+			ON REGSC.RegisterID = REG.RegisterID
+			AND REGSC.Date = RSES.Date
+			AND REGSC.StartTime = RSES.StartTime
+			AND REGSC.EndTime = RSES.EndTime
+		WHERE
+			REG.AcademicYearID = @AcademicYear
+	) RSES
+		ON RSES.RegisterID = REG.RegisterID
+	LEFT JOIN ProSolution.dbo.RegisterMark AS RM 
+		ON RM.RegisterSessionID = RSES.RegisterSessionID
+		AND RM.RegisterStudentID = REGS.RegisterStudentID
+	LEFT JOIN ProSolution.dbo.MarkType AS MT 
+		ON MT.MarkTypeID = RM.MarkTypeID
+	LEFT JOIN ProSolution.dbo.MarkTypeStatus MTS
+		ON MTS.MarkTypeStatusID = MT.MarkTypeStatusID
+	LEFT JOIN ProSolution.dbo.OfferingGroup GRP
+		ON GRP.OfferingGroupID = ENR.OfferingGroupID
+	WHERE
+		SD.AcademicYearID = @AcademicYear
+	GROUP BY
+		REGO.OfferingGroups,
+		CASE
+			WHEN AIM.LEARNING_AIM_TYPE_CODE = '0003' THEN 'GCSE'
+			WHEN AIM.LEARNING_AIM_TYPE_CODE = '1439' THEN 'FSL' + AIM.NVQLevelID_v2
+			WHEN COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%ESOL%' 
+				OR COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%Foundations for Learning and Life' 
+				OR COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%Preparation for Work,%'
+				THEN 
+					CASE 
+						WHEN CRS.Name LIKE '%1618%' THEN 'ESOLFQ'
+						ELSE 'ESOL'
+					END
+			ELSE 'ERROR'
+		END
+
+
+	DROP TABLE IF EXISTS #StaffLinks
+	--Teaching staff
+	SELECT DISTINCT
+		StaffID = STF.StaffID,
+		StaffRef = STF.StaffRefNo,
+		LinkType = 'Teacher',
+		OfferingID = CRS.OfferingID,
+		TeamID = CRS.SID,
+		SiteID = CRS.SiteID,
+		CourseCode = CRS.Code,
+		CourseTitle = CRS.Name,
+		AimCode = CRS.QualID,
+		OfferingGroupID = COALESCE ( GRP.OfferingGroupID, 0 ),
+		GroupCode = GRP.Code,
+		StartDate = CRS.StartDate,
+		EndDate = CRS.EndDate
+		INTO #StaffLinks
+	FROM ProSolution.dbo.Offering CRS
+	INNER JOIN ProSolution.dbo.RegisterCourse REGC
+		ON REGC.OfferingID = CRS.OfferingID
+	INNER JOIN ProSolution.dbo.Register REG
+		ON REG.RegisterID = REGC.RegisterID
+	INNER JOIN ProSolution.dbo.RegisterSchedule REGSC
+		ON REGSC.RegisterID = REG.RegisterID
+	INNER JOIN ProSolution.dbo.RegisterScheduleLecturer REGSCL
+		ON REGSCL.RegisterScheduleID = REGSC.RegisterScheduleID
+	INNER JOIN ProSolution.dbo.RegisterLecturer REGL
+		ON REGL.RegisterLecturerID = REGSCL.RegisterLecturerID
+	INNER JOIN ProSolution.dbo.Staff STF
+		ON STF.StaffID = REGL.StaffID
+	LEFT JOIN ProSolution.dbo.OfferingGroup GRP
+		ON GRP.OfferingGroupID = REGC.OfferingGroupID
+	WHERE
+		CRS.AcademicYearID = @AcademicYear
+		AND
+			CASE
+				WHEN @CoursesITeach = 1 THEN 1
+				ELSE 0
+			END = 1
+
+	UNION ALL
+
+	--Rest of staff
+	SELECT DISTINCT
+		StaffID = STF.StaffID,
+		StaffRef = STF.StaffRefNo,
+		LinkType = 'Support',
+		OfferingID = CRS.OfferingID,
+		TeamID = CRS.SID,
+		SiteID = CRS.SiteID,
+		CourseCode = CRS.Code,
+		CourseTitle = CRS.Name,
+		AimCode = CRS.QualID,
+		OfferingGroupID = COALESCE ( GRP.OfferingGroupID, 0 ),
+		GroupCode = GRP.Code,
+		StartDate = CRS.StartDate,
+		EndDate = CRS.EndDate
+	FROM ProSolution.dbo.StudentDetail SD
+	INNER JOIN ProSolution.dbo.Enrolment ENR
+		ON ENR.StudentDetailID = SD.StudentDetailID
+	INNER JOIN ProSolution.dbo.Offering CRS
+		ON CRS.OfferingID = ENR.OfferingID
+	INNER JOIN ProSolution.dbo._CCC_SystemUser SU
+		ON SU.UserName = @Username
+	INNER JOIN ProSolution.dbo.Staff STF
+		ON STF.SystemUserID = SU.SystemUserID
+	LEFT JOIN ProSolution.dbo.OfferingGroup GRP
+		ON GRP.OfferingGroupID = ENR.OfferingGroupID
+	LEFT JOIN (
+		SELECT DISTINCT
+			StaffID = STF.StaffID
+		FROM ProSolution.dbo.Offering CRS
+		INNER JOIN ProSolution.dbo.RegisterCourse REGC
+			ON REGC.OfferingID = CRS.OfferingID
+		INNER JOIN ProSolution.dbo.Register REG
+			ON REG.RegisterID = REGC.RegisterID
+		INNER JOIN ProSolution.dbo.RegisterSchedule REGSC
+			ON REGSC.RegisterID = REG.RegisterID
+		INNER JOIN ProSolution.dbo.RegisterScheduleLecturer REGSCL
+			ON REGSCL.RegisterScheduleID = REGSC.RegisterScheduleID
+		INNER JOIN ProSolution.dbo.RegisterLecturer REGL
+			ON REGL.RegisterLecturerID = REGSCL.RegisterLecturerID
+		INNER JOIN ProSolution.dbo.Staff STF
+			ON STF.StaffID = REGL.StaffID
+		WHERE
+			CRS.AcademicYearID = @AcademicYear
+			AND
+				CASE
+					WHEN @CoursesITeach = 1 THEN 1
+					ELSE 0
+				END = 1
+	) REG
+		ON REG.StaffID = STF.StaffID
+	WHERE
+		CRS.AcademicYearID = @AcademicYear
+		AND ENR.CompletionStatusID = '1'
+		AND REG.StaffID IS NULL
+		--AND 1 = 2
+
+	UNION ALL
+
+	SELECT DISTINCT
+		StaffID = PAR.OrganisationID,
+		StaffRef = PAR.UKPRN,
+		LinkType = 'Subcontractor',
+		OfferingID = CRS.OfferingID,
+		TeamID = CRS.SID,
+		SiteID = CRS.SiteID,
+		CourseCode = CRS.Code,
+		CourseTitle = CRS.Name,
+		AimCode = CRS.QualID,
+		OfferingGroupID = COALESCE ( GRP.OfferingGroupID, 0 ),
+		GroupCode = GRP.Code,
+		StartDate = CRS.StartDate,
+		EndDate = CRS.EndDate
+	FROM ProSolution.dbo.StudentDetail SD
+	INNER JOIN ProSolution.dbo.Enrolment ENR
+		ON ENR.StudentDetailID = SD.StudentDetailID
+	INNER JOIN ProSolution.dbo.Offering CRS
+		ON CRS.OfferingID = ENR.OfferingID
+	INNER JOIN ProSolution.dbo.Organisation PAR
+		ON PAR.OrganisationID = ENR.FranchisingPartnerID
+	LEFT JOIN ProSolution.dbo.OfferingGroup GRP
+		ON GRP.OfferingGroupID = ENR.OfferingGroupID
+	WHERE
+		SD.AcademicYearID = @AcademicYear
+		AND ENR.CompletionStatusID IN ( '1', '2', '3' )
+		AND PAR.UKPRN IS NOT NULL
+		AND PAR.UKPRN = @Username
+
+
+	DROP TABLE IF EXISTS #StaffLinksReg
+	--Teaching staff
+	SELECT
+		StaffID = STF.StaffID,
+		StaffRef = STF.StaffRefNo,
+		LinkType = 'Teacher',
+		REGO.OfferingGroups,
+		REGO.CourseType,
+		TeamID = MIN ( CRS.SID ),
+		SiteID = MIN ( CRS.SiteID )
+		INTO #StaffLinksReg
+	FROM ProSolution.dbo.Offering CRS
+	INNER JOIN ProSolution.dbo.RegisterCourse REGC
+		ON REGC.OfferingID = CRS.OfferingID
+	INNER JOIN ProSolution.dbo.Register REG
+		ON REG.RegisterID = REGC.RegisterID
+	INNER JOIN #RegOfferings REGO
+		ON REGO.RegisterID = REG.RegisterID
+	INNER JOIN ProSolution.dbo.RegisterSchedule REGSC
+		ON REGSC.RegisterID = REG.RegisterID
+	INNER JOIN ProSolution.dbo.RegisterScheduleLecturer REGSCL
+		ON REGSCL.RegisterScheduleID = REGSC.RegisterScheduleID
+	INNER JOIN ProSolution.dbo.RegisterLecturer REGL
+		ON REGL.RegisterLecturerID = REGSCL.RegisterLecturerID
+	INNER JOIN ProSolution.dbo.Staff STF
+		ON STF.StaffID = REGL.StaffID
+	LEFT JOIN ProSolution.dbo.OfferingGroup GRP
+		ON GRP.OfferingGroupID = REGC.OfferingGroupID
+	WHERE
+		CRS.AcademicYearID = @AcademicYear
+		AND
+			CASE
+				WHEN @CoursesITeach = 1 THEN 1
+				ELSE 0
+			END = 1
+	GROUP BY
+		STF.StaffID,
+		STF.StaffRefNo,
+		REGO.OfferingGroups,
+		REGO.CourseType
+
+	UNION ALL
+
+	--Rest of staff
+	SELECT
+		StaffID = STF.StaffID,
+		StaffRef = STF.StaffRefNo,
+		LinkType = 'Support',
+		REGO.OfferingGroups,
+		REGO.CourseType,
+		TeamID = MIN ( CRS.SID ),
+		SiteID = MIN ( CRS.SiteID )
+	FROM ProSolution.dbo.StudentDetail SD
+	INNER JOIN ProSolution.dbo.Enrolment ENR
+		ON ENR.StudentDetailID = SD.StudentDetailID
+	INNER JOIN ProSolution.dbo.Offering CRS
+		ON CRS.OfferingID = ENR.OfferingID
+	INNER JOIN ProSolution.dbo.RegisterCourse REGC
+		ON REGC.OfferingID = CRS.OfferingID
+	INNER JOIN ProSolution.dbo.Register REG
+		ON REG.RegisterID = REGC.RegisterID
+	INNER JOIN #RegOfferings REGO
+		ON REGO.RegisterID = REG.RegisterID
+	INNER JOIN ProSolution.dbo._CCC_SystemUser SU
+		ON SU.UserName = @Username
+	INNER JOIN ProSolution.dbo.Staff STF
+		ON STF.SystemUserID = SU.SystemUserID
+	LEFT JOIN ProSolution.dbo.OfferingGroup GRP
+		ON GRP.OfferingGroupID = ENR.OfferingGroupID
+	LEFT JOIN (
+		SELECT DISTINCT
+			StaffID = STF.StaffID
+		FROM ProSolution.dbo.Offering CRS
+		INNER JOIN ProSolution.dbo.RegisterCourse REGC
+			ON REGC.OfferingID = CRS.OfferingID
+		INNER JOIN ProSolution.dbo.Register REG
+			ON REG.RegisterID = REGC.RegisterID
+		INNER JOIN ProSolution.dbo.RegisterSchedule REGSC
+			ON REGSC.RegisterID = REG.RegisterID
+		INNER JOIN ProSolution.dbo.RegisterScheduleLecturer REGSCL
+			ON REGSCL.RegisterScheduleID = REGSC.RegisterScheduleID
+		INNER JOIN ProSolution.dbo.RegisterLecturer REGL
+			ON REGL.RegisterLecturerID = REGSCL.RegisterLecturerID
+		INNER JOIN ProSolution.dbo.Staff STF
+			ON STF.StaffID = REGL.StaffID
+		WHERE
+			CRS.AcademicYearID = @AcademicYear
+			AND
+				CASE
+					WHEN @CoursesITeach = 1 THEN 1
+					ELSE 0
+				END = 1
+	) NREG
+		ON NREG.StaffID = STF.StaffID
+	WHERE
+		CRS.AcademicYearID = @AcademicYear
+		AND ENR.CompletionStatusID = '1'
+		AND NREG.StaffID IS NULL
+		--AND 1 = 2
+	GROUP BY
+		STF.StaffID,
+		STF.StaffRefNo,
+		REGO.OfferingGroups,
+		REGO.CourseType
+
+	UNION ALL
+
+	SELECT
+		StaffID = PAR.OrganisationID,
+		StaffRef = PAR.UKPRN,
+		LinkType = 'Subcontractor',
+		REGO.OfferingGroups,
+		REGO.CourseType,
+		TeamID = MIN ( CRS.SID ),
+		SiteID = MIN ( CRS.SiteID )
+	FROM ProSolution.dbo.StudentDetail SD
+	INNER JOIN ProSolution.dbo.Enrolment ENR
+		ON ENR.StudentDetailID = SD.StudentDetailID
+	INNER JOIN ProSolution.dbo.Offering CRS
+		ON CRS.OfferingID = ENR.OfferingID
+	INNER JOIN ProSolution.dbo.RegisterCourse REGC
+		ON REGC.OfferingID = CRS.OfferingID
+	INNER JOIN ProSolution.dbo.Register REG
+		ON REG.RegisterID = REGC.RegisterID
+	INNER JOIN #RegOfferings REGO
+		ON REGO.RegisterID = REG.RegisterID
+	INNER JOIN ProSolution.dbo.Organisation PAR
+		ON PAR.OrganisationID = ENR.FranchisingPartnerID
+	LEFT JOIN ProSolution.dbo.OfferingGroup GRP
+		ON GRP.OfferingGroupID = ENR.OfferingGroupID
+	WHERE
+		SD.AcademicYearID = @AcademicYear
+		AND ENR.CompletionStatusID IN ( '1', '2', '3' )
+		AND PAR.UKPRN IS NOT NULL
+		AND PAR.UKPRN = @Username
+	GROUP BY
+		PAR.OrganisationID,
+		PAR.UKPRN,
+		REGO.OfferingGroups,
+		REGO.CourseType
+
+
+	SELECT
+		CollegeStructureID = 
+			CASE
+				WHEN @StructureLevel >= 3 THEN CRS.TeamID
+				WHEN @StructureLevel >= 2 THEN CRS.FacID
+				WHEN @StructureLevel >= 1 THEN CRS.CollegeID
+				ELSE 0
+			END,
+		CollegeStructureCode = 
+			CASE
+				WHEN @StructureLevel >= 3 THEN CRS.TeamCode
+				WHEN @StructureLevel >= 2 THEN CRS.FacCode
+				WHEN @StructureLevel >= 1 THEN CRS.CollegeCode
+				ELSE NULL
+			END,
+		CollegeStructureName = 
+			CASE
+				WHEN @StructureLevel >= 3 THEN CRS.TeamName
+				WHEN @StructureLevel >= 2 THEN CRS.FacName
+				WHEN @StructureLevel >= 1 THEN CRS.CollegeName
+				ELSE NULL
+			END,
+		CollegeStructureLevel = @StructureLevel,
+		CollegeCode = 
+			CASE
+				WHEN @StructureLevel >= 1 THEN CRS.CollegeCode
+				ELSE NULL
+			END,
+		CollegeName = 
+			CASE
+				WHEN @StructureLevel >= 1 THEN CRS.CollegeName
+				ELSE NULL
+			END,
+		FacCode = 
+			CASE
+				WHEN @StructureLevel >= 2 THEN CRS.FacCode
+				ELSE NULL
+			END,
+		FacName = 
+			CASE
+				WHEN @StructureLevel >= 2 THEN CRS.FacName
+				ELSE NULL
+			END,
+		TeamCode = 
+			CASE
+				WHEN @StructureLevel >= 3 THEN CRS.TeamCode
+				ELSE NULL
+			END,
+		TeamName = 
+			CASE
+				WHEN @StructureLevel >= 3 THEN CRS.TeamName
+				ELSE NULL
+			END,
+		Courses = COUNT ( DISTINCT CourseOfferingID ),
+		Groups = COUNT ( GroupID ),
+		AttendPossible = SUM ( CRS.AttendPossible ),
+		AttendPresent = SUM ( CRS.AttendPresent ),
+		AttendPer = 
+			ROUND ( 
+				CASE
+					WHEN SUM ( CRS.AttendPossible ) = 0 THEN 0
+					ELSE 
+						CAST ( SUM ( CRS.AttendPresent ) AS FLOAT )
+						/
+						CAST ( SUM ( CRS.AttendPossible ) AS FLOAT )
+				END,
+				3
+			),
+		AttendRate = 
+			CASE
+				WHEN
+					ROUND ( 
+						CASE
+							WHEN SUM ( CRS.AttendPossible ) = 0 THEN 0
+							ELSE 
+								CAST ( SUM ( CRS.AttendPresent ) AS FLOAT )
+								/
+								CAST ( SUM ( CRS.AttendPossible ) AS FLOAT )
+						END,
+						3
+					) = 1 THEN 'Excellent'
+				WHEN
+					ROUND ( 
+						CASE
+							WHEN SUM ( CRS.AttendPossible ) = 0 THEN 0
+							ELSE 
+								CAST ( SUM ( CRS.AttendPresent ) AS FLOAT )
+								/
+								CAST ( SUM ( CRS.AttendPossible ) AS FLOAT )
+						END,
+						3
+					) BETWEEN 0.900 AND 0.999 THEN 'Good'
+				WHEN
+					ROUND ( 
+						CASE
+							WHEN SUM ( CRS.AttendPossible ) = 0 THEN 0
+							ELSE 
+								CAST ( SUM ( CRS.AttendPresent ) AS FLOAT )
+								/
+								CAST ( SUM ( CRS.AttendPossible ) AS FLOAT )
+						END,
+						3
+					) BETWEEN 0.850 AND 0.899 THEN 'Poor'
+				ELSE 'VeryPoor'
+			END,
+		ContEnrols = SUM ( CRS.ContEnrols ),
+		PredictionsCompletedNum = SUM ( CRS.PredictionsCompletedNum ),
+		PredictionsCompletedPer = 
+			ROUND ( 
+				CASE
+					WHEN SUM ( CRS.ContEnrols ) = 0 THEN 0
+					ELSE 
+						CAST ( SUM ( CRS.PredictionsCompletedNum ) AS FLOAT )
+						/
+						CAST ( SUM ( CRS.ContEnrols ) AS FLOAT )
+				END,
+				3
+			),
+		PredictedToAchieveNum = SUM ( CRS.PredictedToAchieveNum ),
+		PredictedToAchievePer = 
+			ROUND ( 
+				CASE
+					WHEN SUM ( CRS.ContEnrols ) = 0 THEN 0
+					ELSE 
+						CAST ( SUM ( CRS.PredictedToAchieveNum ) AS FLOAT )
+						/
+						CAST ( SUM ( CRS.ContEnrols ) AS FLOAT )
+				END,
+				3
+			),
+		PredictedToAchieveHighNum = SUM ( CRS.PredictedToAchieveHighNum ),
+		PredictedToAchieveHighPer = 
+			ROUND ( 
+				CASE
+					WHEN SUM ( CRS.ContEnrols ) = 0 THEN 0
+					ELSE 
+						CAST ( SUM ( CRS.PredictedToAchieveHighNum ) AS FLOAT )
+						/
+						CAST ( SUM ( CRS.ContEnrols ) AS FLOAT )
+				END,
+				3
+			)
+	FROM (
+		SELECT
+			CourseID = CAST ( SL.OfferingID AS VARCHAR(50) ) + '-' + CAST ( SL.OfferingGroupID AS VARCHAR(50) ),
+			CollegeID = CGRP.SID,
+			CollegeCode = RTRIM ( CGRP.Code ),
+			CollegeName = CGRP.Name,
+			SiteCode = STE.Code,
+			SiteName = STE.Description,
+			FacID = FAC.SID,
+			FacCode = RTRIM ( FAC.Code ),
+			FacName = FAC.Name,
+			TeamID = TEAM.SID,
+			TeamCode = RTRIM ( TEAM.Code ),
+			TeamName = TEAM.Name,
+			CourseOfferingID = SL.OfferingID,
+			CourseCode = SL.CourseCode,
+			CourseTitle = SL.CourseTitle,
+			CourseTitleShort = 
+				CASE 
+					WHEN LEN ( SL.CourseTitle ) > 50 THEN RTRIM ( LEFT ( SL.CourseTitle, 50 ) ) + '...'
+					ELSE SL.CourseTitle
+				END,
+			GroupID = SL.OfferingGroupID,
+			GroupCode = SL.GroupCode,
+			StartDate = SL.StartDate,
+			EndDate = SL.EndDate,
+			AimCode = SL.AimCode,
+			AimTitle = AIM.LEARNING_AIM_TITLE,
+			AimTypeCode = AIM.LEARNING_AIM_TYPE_CODE,
+			AimTypeName = AIMT.LEARNING_AIM_TYPE_DESC,
+			MainLecturerCode = MLEC.StaffRefNo,
+			MainLecturerSurname = MLEC.Surname,
+			MainLecturerForename = MLEC.FirstName,
+			AttendPossible = COALESCE ( ATT.Possible, 0 ),
+			AttendPresent = COALESCE ( ATT.Present, 0 ),
+			AttendPer = ATT.AttendPer,
+			ContEnrols = ENR.ContEnrols,
+			PredictedGradeLookupType = 
+				CASE
+					WHEN AIM.NVQLevelID_v2 = '2' AND AIM.LEARNING_AIM_TYPE_CODE = '0003' AND AIM.LEARNING_AIM_TITLE LIKE '%Double%' THEN 'PREDICTED_GCSE_DOUBLE_GRADE'
+					WHEN AIM.NVQLevelID_v2 = '2' AND AIM.LEARNING_AIM_TYPE_CODE = '0003' THEN 'PREDICTED_GCSE_GRADE'
+					WHEN AIM.NVQLevelID_v2 IN ( 'E', '1', '2' ) AND AIM.LEARNING_AIM_TYPE_CODE = '1439' THEN 'PREDICTED_FUNCTIONAL_SKILL_GRADE'
+					WHEN AIM.NVQLevelID_v2 = '3' AND AIM.LEARNING_AIM_TYPE_CODE IN (
+						'1431',	--GCE Applied A Level (Double Award)
+						'1433',	--GCE Applied AS Level (Double Award)
+						'1453'	--GCE A Level (with GCE Advanced Subsidiary)
+					) THEN 'PREDICTED_ALEVEL_DOUBLE_GRADE'
+					WHEN AIM.NVQLevelID_v2 = '3' AND AIM.LEARNING_AIM_TYPE_CODE IN (
+						'0001', --GCE AS level
+						'0002',	--GCE A level
+						'1413',	--GCE A2 Level
+						'1430',	--GCE Applied A Level
+						'1432'	--GCE Applied AS Level
+					) THEN 'PREDICTED_ALEVEL_GRADE'
+					WHEN AIM.NVQLevelID_v2 IN ( 'E', '1', '2', '3' ) AND AIM.LEARNING_AIM_TYPE_CODE IN (
+						'1452', --Award
+						'0016', --Certificate
+						'0006', --Diploma
+						'1428', --National Extended Diploma
+						'1455' --Edexcel First Extended Certificate (2012 onwards)
+					) THEN 'PREDICTED_VOCATIONAL_GRADE'
+					ELSE 'PREDICTED_GRADE'
+				END,
+			ENR.PredictionsCompletedNum,
+			ENR.PredictionsCompletedPer,
+			ENR.PredictedToAchieveNum,
+			ENR.PredictedToAchievePer,
+			ENR.PredictedToAchieveHighNum,
+			ENR.PredictedToAchieveHighPer
+		FROM (
+			SELECT
+				STF.StaffID,
+				STF.StaffRefNo,
+				SU.Username
+			FROM ProSolution.dbo.Staff STF
+			INNER JOIN ProSolution.dbo._CCC_SystemUser SU
+				ON SU.SystemUserID = STF.SystemUserID
+			WHERE
+				STF.IsCurrent = 1
+
+			UNION ALL
+
+			SELECT
+				StaffID = PAR.OrganisationID,
+				StaffRefNo = PAR.UKPRN,
+				Username = PAR.UKPRN
+			FROM ProSolution.dbo.Organisation PAR
+			WHERE
+				PAR.UKPRN IS NOT NULL
+				AND PAR.UKPRN = @Username
+		) STF
+		INNER JOIN #StaffLinks SL
+			ON SL.StaffID = STF.StaffID
+		INNER JOIN ProSolution.dbo.Site STE
+			ON STE.SiteID = SL.SiteID
+		INNER JOIN ProSolution.dbo.CollegeLevel TEAM
+			ON TEAM.SID = SL.TeamID
+		INNER JOIN ProSolution.dbo.CollegeLevel FAC
+			ON FAC.SID = TEAM.ParentSID
+		INNER JOIN ProSolution.dbo.CollegeLevel CGRP
+			ON CGRP.SID = FAC.ParentSID
+		INNER JOIN (
+			SELECT
+				OfferingID = CRS.OfferingID,
+				OfferingGroupID = COALESCE ( GRP.OfferingGroupID, 0 ),
+				ContEnrols = COUNT ( SD.StudentDetailID ),
+				PredictionsCompletedNum = 
+					SUM ( CASE WHEN ENR.UserDefined20 IS NOT NULL THEN 1 ELSE 0 END ),
+				PredictionsCompletedPer = 
+					ROUND ( 
+						CASE 
+							WHEN COUNT ( SD.StudentDetailID ) = 0 THEN 0
+							ELSE 
+								CAST ( SUM ( CASE WHEN ENR.UserDefined20 IS NOT NULL THEN 1 ELSE 0 END ) AS FLOAT )
+								/
+								CAST ( COUNT ( SD.StudentDetailID ) AS FLOAT )
+						END,
+						3
+					),
+				PredictedToAchieveNum = SUM ( CASE WHEN ENR.UserDefined20 = 'Y' THEN 1 ELSE 0 END ),
+				PredictedToAchievePer = 
+					ROUND ( 
+						CASE 
+							WHEN COUNT ( SD.StudentDetailID ) = 0 THEN 0
+							ELSE 
+								CAST ( SUM ( CASE WHEN ENR.UserDefined20 = 'Y' THEN 1 ELSE 0 END ) AS FLOAT )
+								/
+								CAST ( COUNT ( SD.StudentDetailID ) AS FLOAT )
+						END,
+						3
+					),
+				PredictedToAchieveHighNum = 
+					SUM ( 
+						CASE 
+							WHEN AIM.LEARNING_AIM_TYPE_CODE IN (
+								'0003', --GCSE
+								'1422', --GCSEs in Vocational Subjects
+								'2999' --Short Course GCSE
+							) THEN 
+								CASE
+									WHEN ENR.UserDefined25 IN ( '4', '5', '6', '7', '8', '9', 'A*', '*A', 'A', 'B', 'C' ) THEN 1
+									ELSE 0
+								END
+							WHEN AIM.LEARNING_AIM_TYPE_CODE IN (
+								'0001', --GCE AS level
+								'0002', --GCE A level
+								'1413', --GCE A2 Level
+								'1430', --GCE Applied A Level
+								'1431', --GCE Applied A Level (Double Award)
+								'1432', --GCE Applied AS Level
+								'1433', --GCE Applied AS Level (Double Award)
+								'1453' --GCE A Level (with GCE Advanced Subsidiary)
+							) THEN 
+								CASE
+									WHEN ENR.UserDefined25 IN ( '5', '6', '7', '8', '9', 'A*', '*A', 'A', 'B' ) THEN 1
+									ELSE 0
+								END
+							ELSE
+								CASE
+									WHEN ENR.UserDefined25 IN ( 'D*', 'D', 'D*D*', 'D*D', 'DD', 'D*D*D*', 'D*D*D', 'D*DD', 'DDD', 'DS*', 'DS' ) THEN 1
+									ELSE 0
+								END
+						END 
+					),
+				PredictedToAchieveHighPer = 
+					ROUND ( 
+						CASE 
+							WHEN COUNT ( SD.StudentDetailID ) = 0 THEN 0
+							ELSE 
+								CAST ( SUM ( 
+									CASE 
+										WHEN AIM.LEARNING_AIM_TYPE_CODE IN (
+											'0003', --GCSE
+											'1422', --GCSEs in Vocational Subjects
+											'2999' --Short Course GCSE
+										) THEN 
+											CASE
+												WHEN ENR.UserDefined25 IN ( '4', '5', '6', '7', '8', '9', 'A*', '*A', 'A', 'B', 'C' ) THEN 1
+												ELSE 0
+											END
+										WHEN AIM.LEARNING_AIM_TYPE_CODE IN (
+											'0001', --GCE AS level
+											'0002', --GCE A level
+											'1413', --GCE A2 Level
+											'1430', --GCE Applied A Level
+											'1431', --GCE Applied A Level (Double Award)
+											'1432', --GCE Applied AS Level
+											'1433', --GCE Applied AS Level (Double Award)
+											'1453' --GCE A Level (with GCE Advanced Subsidiary)
+										) THEN 
+											CASE
+												WHEN ENR.UserDefined25 IN ( '5', '6', '7', '8', '9', 'A*', '*A', 'A', 'B' ) THEN 1
+												ELSE 0
+											END
+										ELSE
+											CASE
+												WHEN ENR.UserDefined25 IN ( 'D*', 'D', 'D*D*', 'D*D', 'DD', 'D*D*D*', 'D*D*D', 'D*DD', 'DDD', 'DS*', 'DS' ) THEN 1
+												ELSE 0
+											END
+									END 
+									) AS FLOAT )
+								/
+								CAST ( COUNT ( SD.StudentDetailID ) AS FLOAT )
+						END,
+						3
+					)
+			FROM ProSolution.dbo.StudentDetail SD
+			INNER JOIN ProSolution.dbo.Enrolment ENR
+				ON ENR.StudentDetailID = SD.StudentDetailID
+			INNER JOIN ProSolution.dbo.Offering CRS
+				ON CRS.OfferingID = ENR.OfferingID
+			LEFT JOIN ProSolution.dbo.OfferingGroup GRP
+				ON GRP.OfferingGroupID = ENR.OfferingGroupID
+			LEFT JOIN ProSolution.dbo.Learning_Aim AIM
+				ON AIM.LEARNING_AIM_REF = CRS.QualID
+			LEFT JOIN ProSolution.dbo.WBLPeriodOFTraining POT
+				ON POT.WBLPeriodOfTrainingID = ENR.WBLPeriodOfTrainingID
+			WHERE
+				SD.AcademicYearID = @AcademicYear
+				AND ENR.CompletionStatusID = '1'
+				AND CAST ( ENR.ExpectedEndDate AS DATE ) <= '20' + RIGHT ( SD.AcademicYearID, 2 ) + '-07-31'
+				AND CAST ( ENR.StartDate AS DATE ) <= GETDATE()
+				AND
+					--If App only show ZPROG aim
+					CASE
+						WHEN 
+							ENR.FundingID IN ( '35', '36', '99' )
+							AND POT.ProgrammeTypeID IS NOT NULL THEN
+								CASE
+									WHEN ENR.AimTypeID = 1 THEN 1
+									ELSE 0
+								END
+						ELSE 1
+					END = 1
+			GROUP BY
+				CRS.OfferingID,
+				COALESCE ( GRP.OfferingGroupID, 0 )
+		) ENR
+			ON ENR.OfferingID = SL.OfferingID
+			AND ENR.OfferingGroupID = SL.OfferingGroupID
+		LEFT JOIN #Attend ATT
+			ON ATT.OfferingID = SL.OfferingID
+			AND ATT.OfferingGroupID = SL.OfferingGroupID
+		LEFT JOIN ProSolution.dbo.Learning_Aim AIM
+			ON AIM.LEARNING_AIM_REF = SL.AimCode
+		LEFT JOIN ProSolution.dbo.LEARNING_AIM_TYPES AIMT
+			ON AIMT.LEARNING_AIM_TYPE_CODE = AIM.LEARNING_AIM_TYPE_CODE
+		LEFT JOIN (
+			SELECT DISTINCT
+				CRS.OfferingID,
+				OfferingGroupID = COALESCE ( REGC.OfferingGroupID, 0 )
+			FROM ProSolution.dbo.Offering CRS
+			INNER JOIN ProSolution.dbo.RegisterCourse REGC
+				ON REGC.OfferingID = CRS.OfferingID
+			INNER JOIN ProSolution.dbo.Register REG
+				ON REG.RegisterID = REGC.RegisterID
+			INNER JOIN ProSolution.dbo.RegisterSchedule REGS
+				ON REGS.RegisterID = REG.RegisterID
+			INNER JOIN ProSolution.dbo.RegisterScheduleLecturer REGSL
+				ON REGSL.RegisterScheduleID = REGS.RegisterScheduleID
+			INNER JOIN ProSolution.dbo.RegisterLecturer LEC
+				ON LEC.RegisterLecturerID = REGSL.RegisterLecturerID
+			INNER JOIN ProSolution.dbo.Staff STF
+				ON STF.StaffID = LEC.StaffID
+			WHERE
+				CRS.AcademicYearID = @AcademicYear
+				AND STF.StaffRefNo + ' - ' + STF.FirstName + ' ' + STF.Surname LIKE '%' + @StaffSearch + '%'
+		) LEC
+			ON LEC.OfferingID = SL.OfferingID
+			AND LEC.OfferingGroupID = SL.OfferingGroupID
+		LEFT JOIN (
+			SELECT
+				CRS.OfferingID,
+				OfferingGroupID = COALESCE ( REGC.OfferingGroupID, 0 ),
+				CourseCode = CRS.Code,
+				STF.StaffID,
+				STF.StaffRefNo,
+				STF.Surname,
+				STF.FirstName,
+				NumSessions = COUNT ( REGSL.RegisterLecturerID ),
+				RowNum = 
+					ROW_NUMBER () OVER (
+						PARTITION BY
+							CRS.OfferingID,
+							COALESCE ( REGC.OfferingGroupID, 0 )
+						ORDER BY
+							COUNT ( REGSL.RegisterLecturerID ) DESC,
+							STF.Surname,
+							STF.FirstName,
+							STF.StaffRefNo
+					)
+			FROM ProSolution.dbo.Offering CRS
+			INNER JOIN ProSolution.dbo.RegisterCourse REGC
+				ON REGC.OfferingID = CRS.OfferingID
+			INNER JOIN ProSolution.dbo.Register REG
+				ON REG.RegisterID = REGC.RegisterID
+			INNER JOIN ProSolution.dbo.RegisterSchedule REGS
+				ON REGS.RegisterID = REG.RegisterID
+			INNER JOIN ProSolution.dbo.RegisterScheduleLecturer REGSL
+				ON REGSL.RegisterScheduleID = REGS.RegisterScheduleID
+			INNER JOIN ProSolution.dbo.RegisterLecturer LEC
+				ON LEC.RegisterLecturerID = REGSL.RegisterLecturerID
+			INNER JOIN ProSolution.dbo.Staff STF
+				ON STF.StaffID = LEC.StaffID
+			WHERE
+				CRS.AcademicYearID = @AcademicYear
+			GROUP BY
+				CRS.OfferingID,
+				COALESCE ( REGC.OfferingGroupID, 0 ),
+				CRS.Code,
+				STF.StaffID,
+				STF.StaffRefNo,
+				STF.Surname,
+				STF.FirstName
+		) MLEC
+			ON MLEC.OfferingID = SL.OfferingID
+			AND MLEC.OfferingGroupID = SL.OfferingGroupID
+			AND MLEC.RowNum = 1
+		WHERE
+			STF.Username = @Username
+			AND SL.CourseCode NOT LIKE '%TUT'
+			AND SL.CourseCode NOT LIKE '%WEX'
+			AND SL.CourseCode NOT LIKE '%DSS'
+			AND SL.CourseCode NOT LIKE '%ENR'
+			AND SL.CourseCode NOT LIKE '%CDF'
+			AND SL.AimCode IS NOT NULL
+			AND ( CGRP.Code = COALESCE ( @CollegeGroup, CGRP.Code ) OR @CollegeGroup = 'ALL' )
+			AND ( FAC.Code = COALESCE ( @Fac, FAC.Code ) OR @Fac = 'ALL' )
+			AND ( TEAM.Code = COALESCE ( @Team, TEAM.Code ) OR @Team = 'ALL' )
+			AND
+				CASE
+					WHEN @CourseCode IS NOT NULL AND @GroupCode IS NOT NULL THEN 
+						CASE
+							WHEN 
+								SL.CourseCode = @CourseCode
+								AND SL.GroupCode = @GroupCode
+								THEN 1
+							ELSE 0
+						END
+					WHEN @CourseCode IS NOT NULL THEN 
+						CASE
+							WHEN 
+								SL.CourseCode = @CourseCode
+								THEN 1
+							ELSE 0
+						END
+					WHEN LEN ( @CourseSearch ) + LEN ( @StaffSearch ) > 0 THEN 
+						CASE
+							WHEN 
+								SL.CourseCode + ' - ' + SL.CourseTitle LIKE '%' + @CourseSearch + '%' 
+								AND 
+									CASE
+										WHEN LEN ( @StaffSearch ) > 0 THEN
+											CASE
+												WHEN LEC.OfferingID IS NOT NULL THEN 1
+												ELSE 0
+											END
+										ELSE 1
+									END = 1
+								THEN 1
+							ELSE 0
+						END
+					ELSE
+						CASE
+							WHEN STF.UserName = @Username THEN 1
+							ELSE 0
+						END
+				END = 1
+
+		UNION ALL
+
+
+		SELECT 
+			CourseID = CAST ( REG.RegisterID AS VARCHAR(50) ),
+			CollegeID = CGRP.SID,
+			CollegeCode = RTRIM ( CGRP.Code ),
+			CollegeName = CGRP.Name,
+			SiteCode = STE.Code,
+			SiteName = STE.Description,
+			FacID = FAC.SID,
+			FacCode = RTRIM ( FAC.Code ),
+			FacName = FAC.Name,
+			TeamID = TEAM.SID,
+			TeamCode = RTRIM ( TEAM.Code ),
+			TeamName = TEAM.Name,
+			CourseOfferingID = REG.RegisterID,
+			CourseCode = RIGHT ( REPLACE ( REPLACE ( REG.RegisterNo, ' ', '_' ), '/', '_' ), 19 ) + '-' + LREG.CourseType,
+			CourseTitle = 
+				CASE
+					WHEN CAST ( OneReg.LatestEnd AS DATE ) < CAST ( GetDate() AS DATE ) THEN 'ARCHIVED - '
+					ELSE ''
+				END 
+				+ REG.Title + '-' + LREG.CourseType + ' (' + CAST ( OneReg.NumTotalRegisters AS VARCHAR(8) ) + ')',
+			CourseTitleShort = 
+				CASE 
+					WHEN LEN ( 
+						CASE
+							WHEN CAST ( OneReg.LatestEnd AS DATE ) < CAST ( GetDate() AS DATE ) THEN 'ARCHIVED - '
+							ELSE ''
+						END 
+						+ REG.Title + '-' + LREG.CourseType + ' (' + CAST ( OneReg.NumTotalRegisters AS VARCHAR(8) ) + ')'
+					) > 50 THEN RTRIM ( LEFT ( 
+						CASE
+							WHEN CAST ( OneReg.LatestEnd AS DATE ) < CAST ( GetDate() AS DATE ) THEN 'ARCHIVED - '
+							ELSE ''
+						END 
+						+ REG.Title + '-' + LREG.CourseType + ' (' + CAST ( OneReg.NumTotalRegisters AS VARCHAR(8) ) + ')'
+					, 50 ) ) + '...'
+					ELSE 
+						CASE
+							WHEN CAST ( OneReg.LatestEnd AS DATE ) < CAST ( GetDate() AS DATE ) THEN 'ARCHIVED - '
+							ELSE ''
+						END 
+						+ REG.Title + '-' + LREG.CourseType + ' (' + CAST ( OneReg.NumTotalRegisters AS VARCHAR(8) ) + ')'
+				END,
+			GroupCode = NULL,
+			StartDate = REG.StartDate,
+			EndDate = REG.EndDate,
+			AimCode = CRS.QualID,
+			AimTitle = AIM.LEARNING_AIM_TITLE,
+			AimTypeCode = AIM.LEARNING_AIM_TYPE_CODE,
+			AimTypeName = AIMT.LEARNING_AIM_TYPE_DESC,
+			MainLecturerCode = MLEC.StaffRefNo,
+			MainLecturerSurname = MLEC.Surname,
+			MainLecturerForename = MLEC.FirstName,
+			AttendPossible = COALESCE ( ATT.Possible, 0 ),
+			AttendPresent = COALESCE ( ATT.Present, 0 ),
+			AttendPer = COALESCE ( ATT.AttendPer, 0 ),
+			AttendRate = 
+				CASE
+					WHEN ATT.AttendPer IS NULL THEN 'NoRegisters'
+					WHEN COALESCE ( ATT.AttendPer, 0 ) = 1 THEN 'Excellent'
+					WHEN COALESCE ( ATT.AttendPer, 0 ) BETWEEN 0.900 AND 0.999 THEN 'Good'
+					WHEN COALESCE ( ATT.AttendPer, 0 ) BETWEEN 0.850 AND 0.899 THEN 'Poor'
+					ELSE 'VeryPoor'
+				END,
+			ContEnrols = ENR.ContEnrols,
+			PredictedGradeLookupType = 
+				CASE
+					WHEN AIM.NVQLevelID_v2 = '2' AND AIM.LEARNING_AIM_TYPE_CODE = '0003' AND AIM.LEARNING_AIM_TITLE LIKE '%Double%' THEN 'PREDICTED_GCSE_DOUBLE_GRADE'
+					WHEN AIM.NVQLevelID_v2 = '2' AND AIM.LEARNING_AIM_TYPE_CODE = '0003' THEN 'PREDICTED_GCSE_GRADE'
+					WHEN AIM.NVQLevelID_v2 IN ( 'E', '1', '2' ) AND AIM.LEARNING_AIM_TYPE_CODE = '1439' THEN 'PREDICTED_FUNCTIONAL_SKILL_GRADE'
+					WHEN AIM.NVQLevelID_v2 = '3' AND AIM.LEARNING_AIM_TYPE_CODE IN (
+						'1431',	--GCE Applied A Level (Double Award)
+						'1433',	--GCE Applied AS Level (Double Award)
+						'1453'	--GCE A Level (with GCE Advanced Subsidiary)
+					) THEN 'PREDICTED_ALEVEL_DOUBLE_GRADE'
+					WHEN AIM.NVQLevelID_v2 = '3' AND AIM.LEARNING_AIM_TYPE_CODE IN (
+						'0001', --GCE AS level
+						'0002',	--GCE A level
+						'1413',	--GCE A2 Level
+						'1430',	--GCE Applied A Level
+						'1432'	--GCE Applied AS Level
+					) THEN 'PREDICTED_ALEVEL_GRADE'
+					WHEN AIM.NVQLevelID_v2 IN ( 'E', '1', '2', '3' ) AND AIM.LEARNING_AIM_TYPE_CODE IN (
+						'1452', --Award
+						'0016', --Certificate
+						'0006', --Diploma
+						'1428', --National Extended Diploma
+						'1455' --Edexcel First Extended Certificate (2012 onwards)
+					) THEN 'PREDICTED_VOCATIONAL_GRADE'
+					ELSE 'PREDICTED_GRADE'
+				END,
+			ENR.PredictionsCompletedNum,
+			ENR.PredictionsCompletedPer,
+			ENR.PredictedToAchieveNum,
+			ENR.PredictedToAchievePer,
+			ENR.PredictedToAchieveHighNum,
+			ENR.PredictedToAchieveHighPer
+		FROM (
+			SELECT
+				STF.StaffID,
+				STF.StaffRefNo,
+				SU.Username
+			FROM ProSolution.dbo.Staff STF
+			INNER JOIN ProSolution.dbo._CCC_SystemUser SU
+				ON SU.SystemUserID = STF.SystemUserID
+			WHERE
+				STF.IsCurrent = 1
+
+			UNION ALL
+
+			SELECT
+				StaffID = PAR.OrganisationID,
+				StaffRefNo = PAR.UKPRN,
+				Username = PAR.UKPRN
+			FROM ProSolution.dbo.Organisation PAR
+			WHERE
+				PAR.UKPRN IS NOT NULL
+				AND PAR.UKPRN = @Username
+		) STF
+		INNER JOIN #StaffLinksReg SL
+			ON SL.StaffID = STF.StaffID
+		INNER JOIN ProSolution.dbo.Site STE
+			ON STE.SiteID = SL.SiteID
+		INNER JOIN ProSolution.dbo.CollegeLevel TEAM
+			ON TEAM.SID = SL.TeamID
+		INNER JOIN ProSolution.dbo.CollegeLevel FAC
+			ON FAC.SID = TEAM.ParentSID
+		INNER JOIN ProSolution.dbo.CollegeLevel CGRP
+			ON CGRP.SID = FAC.ParentSID
+		INNER JOIN #RegOfferings LREG
+			ON LREG.OfferingGroups = SL.OfferingGroups
+			AND LREG.CourseType = SL.CourseType
+		INNER JOIN ProSolution.dbo.Register REG
+			ON REG.RegisterID = LREG.RegisterID
+		INNER JOIN (
+			SELECT
+				RegisterID = MIN ( REGG.RegisterID ),
+				REGG.OfferingGroups,
+				NumTotalRegisters = COUNT ( REGG.RegisterID ),
+				EarliestStart = MIN ( REGG.StartDate ),
+				LatestEnd = MAX ( REGG.EndDate ),
+				CourseID = MIN ( REGC.OfferingID )
+			FROM #RegOfferings REGG -- Returns only one register where attached modules are same as other registers
+			INNER JOIN ProSolution.dbo.RegisterCourse REGC
+				ON REGC.RegisterID = REGG.RegisterID
+			GROUP BY
+				REGG.OfferingGroups
+		) OneReg
+			ON OneReg.RegisterID = REG.RegisterID
+		INNER JOIN ProSolution.dbo.Offering CRS
+			ON CRS.OfferingID = OneReg.CourseID
+		INNER JOIN (
+			SELECT
+				REGO.OfferingGroups,
+				REGO.CourseType,
+				ContEnrols = COUNT ( SD.StudentDetailID ),
+				PredictionsCompletedNum = 
+					SUM ( CASE WHEN ENR.UserDefined20 IS NOT NULL THEN 1 ELSE 0 END ),
+				PredictionsCompletedPer = 
+					ROUND ( 
+						CASE 
+							WHEN COUNT ( SD.StudentDetailID ) = 0 THEN 0
+							ELSE 
+								CAST ( SUM ( CASE WHEN ENR.UserDefined20 IS NOT NULL THEN 1 ELSE 0 END ) AS FLOAT )
+								/
+								CAST ( COUNT ( SD.StudentDetailID ) AS FLOAT )
+						END,
+						3
+					),
+				PredictedToAchieveNum = SUM ( CASE WHEN ENR.UserDefined20 = 'Y' THEN 1 ELSE 0 END ),
+				PredictedToAchievePer = 
+					ROUND ( 
+						CASE 
+							WHEN COUNT ( SD.StudentDetailID ) = 0 THEN 0
+							ELSE 
+								CAST ( SUM ( CASE WHEN ENR.UserDefined20 = 'Y' THEN 1 ELSE 0 END ) AS FLOAT )
+								/
+								CAST ( COUNT ( SD.StudentDetailID ) AS FLOAT )
+						END,
+						3
+					),
+				PredictedToAchieveHighNum = 
+						SUM ( 
+							CASE 
+								WHEN AIM.LEARNING_AIM_TYPE_CODE IN (
+									'0003', --GCSE
+									'1422', --GCSEs in Vocational Subjects
+									'2999' --Short Course GCSE
+								) THEN 
+									CASE
+										WHEN ENR.UserDefined25 IN ( '4', '5', '6', '7', '8', '9', 'A*', '*A', 'A', 'B', 'C' ) THEN 1
+										ELSE 0
+									END
+								WHEN AIM.LEARNING_AIM_TYPE_CODE IN (
+									'0001', --GCE AS level
+									'0002', --GCE A level
+									'1413', --GCE A2 Level
+									'1430', --GCE Applied A Level
+									'1431', --GCE Applied A Level (Double Award)
+									'1432', --GCE Applied AS Level
+									'1433', --GCE Applied AS Level (Double Award)
+									'1453' --GCE A Level (with GCE Advanced Subsidiary)
+								) THEN 
+									CASE
+										WHEN ENR.UserDefined25 IN ( '5', '6', '7', '8', '9', 'A*', '*A', 'A', 'B' ) THEN 1
+										ELSE 0
+									END
+								ELSE
+									CASE
+										WHEN ENR.UserDefined25 IN ( 'D*', 'D', 'D*D*', 'D*D', 'DD', 'D*D*D*', 'D*D*D', 'D*DD', 'DDD', 'DS*', 'DS' ) THEN 1
+										ELSE 0
+									END
+							END 
+						),
+					PredictedToAchieveHighPer = 
+						ROUND ( 
+							CASE 
+								WHEN COUNT ( SD.StudentDetailID ) = 0 THEN 0
+								ELSE 
+									CAST ( SUM ( 
+										CASE 
+											WHEN AIM.LEARNING_AIM_TYPE_CODE IN (
+												'0003', --GCSE
+												'1422', --GCSEs in Vocational Subjects
+												'2999' --Short Course GCSE
+											) THEN 
+												CASE
+													WHEN ENR.UserDefined25 IN ( '4', '5', '6', '7', '8', '9', 'A*', '*A', 'A', 'B', 'C' ) THEN 1
+													ELSE 0
+												END
+											WHEN AIM.LEARNING_AIM_TYPE_CODE IN (
+												'0001', --GCE AS level
+												'0002', --GCE A level
+												'1413', --GCE A2 Level
+												'1430', --GCE Applied A Level
+												'1431', --GCE Applied A Level (Double Award)
+												'1432', --GCE Applied AS Level
+												'1433', --GCE Applied AS Level (Double Award)
+												'1453' --GCE A Level (with GCE Advanced Subsidiary)
+											) THEN 
+												CASE
+													WHEN ENR.UserDefined25 IN ( '5', '6', '7', '8', '9', 'A*', '*A', 'A', 'B' ) THEN 1
+													ELSE 0
+												END
+											ELSE
+												CASE
+													WHEN ENR.UserDefined25 IN ( 'D*', 'D', 'D*D*', 'D*D', 'DD', 'D*D*D*', 'D*D*D', 'D*DD', 'DDD', 'DS*', 'DS' ) THEN 1
+													ELSE 0
+												END
+										END 
+										) AS FLOAT )
+									/
+									CAST ( COUNT ( SD.StudentDetailID ) AS FLOAT )
+							END,
+							3
+						)
+			FROM ProSolution.dbo.StudentDetail SD
+			INNER JOIN ProSolution.dbo.Enrolment ENR
+				ON ENR.StudentDetailID = SD.StudentDetailID
+			INNER JOIN ProSolution.dbo.Offering CRS
+				ON CRS.OfferingID = ENR.OfferingID
+			INNER JOIN ProSolution.dbo.Learning_Aim AIM
+				ON AIM.LEARNING_AIM_REF = CRS.QualID
+			INNER JOIN ProSolution.dbo.RegisterStudent REGS
+				ON REGS.EnrolmentID = ENR.EnrolmentID
+			INNER JOIN ProSolution.dbo.Register REG
+				ON REG.RegisterID = REGS.RegisterID
+			INNER JOIN #RegOfferings REGO
+				ON REGO.RegisterID = REG.RegisterID
+				AND REGO.CourseType = 
+					CASE
+						WHEN AIM.LEARNING_AIM_TYPE_CODE = '0003' THEN 'GCSE'
+						WHEN AIM.LEARNING_AIM_TYPE_CODE = '1439' THEN 'FSL' + AIM.NVQLevelID_v2
+						WHEN COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%ESOL%' 
+							OR COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%Foundations for Learning and Life' 
+							OR COALESCE ( AIM.LEARNING_AIM_TITLE, 'X' ) LIKE '%Preparation for Work,%'
+							THEN 
+								CASE 
+									WHEN CRS.Name LIKE '%1618%' THEN 'ESOLFQ'
+									ELSE 'ESOL'
+								END
+						ELSE 'ERROR'
+					END
+			LEFT JOIN ProSolution.dbo.OfferingGroup GRP
+				ON GRP.OfferingGroupID = ENR.OfferingGroupID
+			LEFT JOIN ProSolution.dbo.WBLPeriodOFTraining POT
+				ON POT.WBLPeriodOfTrainingID = ENR.WBLPeriodOfTrainingID
+			WHERE
+				SD.AcademicYearID = @AcademicYear
+				AND ENR.CompletionStatusID = '1'
+				AND CAST ( ENR.ExpectedEndDate AS DATE ) <= '20' + RIGHT ( SD.AcademicYearID, 2 ) + '-07-31'
+				AND CAST ( ENR.StartDate AS DATE ) <= GETDATE()
+				AND
+					--If App only show ZPROG aim
+					CASE
+						WHEN 
+							ENR.FundingID IN ( '35', '36', '99' )
+							AND POT.ProgrammeTypeID IS NOT NULL THEN
+								CASE
+									WHEN ENR.AimTypeID = 1 THEN 1
+									ELSE 0
+								END
+						ELSE 1
+					END = 1
+			GROUP BY
+				REGO.OfferingGroups,
+				REGO.CourseType
+		) ENR
+			ON ENR.OfferingGroups = LREG.OfferingGroups
+			AND ENR.CourseType = LREG.CourseType
+		INNER JOIN #AttendReg ATT
+			ON ATT.OfferingGroups = LREG.OfferingGroups
+			AND ATT.CourseType = LREG.CourseType
+		LEFT JOIN ProSolution.dbo.Learning_Aim AIM
+			ON AIM.LEARNING_AIM_REF = CRS.QualID
+		LEFT JOIN ProSolution.dbo.LEARNING_AIM_TYPES AIMT
+			ON AIMT.LEARNING_AIM_TYPE_CODE = AIM.LEARNING_AIM_TYPE_CODE
+		LEFT JOIN (
+			SELECT DISTINCT
+				REGO.OfferingGroups,
+				REGO.CourseType
+			FROM ProSolution.dbo.Offering CRS
+			INNER JOIN ProSolution.dbo.RegisterCourse REGC
+				ON REGC.OfferingID = CRS.OfferingID
+			INNER JOIN ProSolution.dbo.Register REG
+				ON REG.RegisterID = REGC.RegisterID
+			INNER JOIN #RegOfferings REGO
+				ON REGO.RegisterID = REG.RegisterID
+			INNER JOIN ProSolution.dbo.RegisterSchedule REGS
+				ON REGS.RegisterID = REG.RegisterID
+			INNER JOIN ProSolution.dbo.RegisterScheduleLecturer REGSL
+				ON REGSL.RegisterScheduleID = REGS.RegisterScheduleID
+			INNER JOIN ProSolution.dbo.RegisterLecturer LEC
+				ON LEC.RegisterLecturerID = REGSL.RegisterLecturerID
+			INNER JOIN ProSolution.dbo.Staff STF
+				ON STF.StaffID = LEC.StaffID
+			WHERE
+				CRS.AcademicYearID = @AcademicYear
+				AND STF.StaffRefNo + ' - ' + STF.FirstName + ' ' + STF.Surname LIKE '%' + @StaffSearch + '%'
+		) LEC
+			ON LEC.OfferingGroups = LREG.OfferingGroups
+			AND LEC.CourseType = LREG.CourseType
+		LEFT JOIN (
+			SELECT
+				REGO.OfferingGroups,
+				REGO.CourseType,
+				STF.StaffID,
+				STF.StaffRefNo,
+				STF.Surname,
+				STF.FirstName,
+				NumSessions = COUNT ( REGSL.RegisterLecturerID ),
+				RowNum = 
+					ROW_NUMBER () OVER (
+						PARTITION BY
+							REGO.OfferingGroups,
+							REGO.CourseType
+						ORDER BY
+							COUNT ( REGSL.RegisterLecturerID ) DESC,
+							STF.Surname,
+							STF.FirstName,
+							STF.StaffRefNo
+					)
+			FROM ProSolution.dbo.Offering CRS
+			INNER JOIN ProSolution.dbo.RegisterCourse REGC
+				ON REGC.OfferingID = CRS.OfferingID
+			INNER JOIN ProSolution.dbo.Register REG
+				ON REG.RegisterID = REGC.RegisterID
+			INNER JOIN #RegOfferings REGO
+				ON REGO.RegisterID = REG.RegisterID
+			INNER JOIN ProSolution.dbo.RegisterSchedule REGS
+				ON REGS.RegisterID = REG.RegisterID
+			INNER JOIN ProSolution.dbo.RegisterScheduleLecturer REGSL
+				ON REGSL.RegisterScheduleID = REGS.RegisterScheduleID
+			INNER JOIN ProSolution.dbo.RegisterLecturer LEC
+				ON LEC.RegisterLecturerID = REGSL.RegisterLecturerID
+			INNER JOIN ProSolution.dbo.Staff STF
+				ON STF.StaffID = LEC.StaffID
+			WHERE
+				CRS.AcademicYearID = @AcademicYear
+			GROUP BY
+				REGO.OfferingGroups,
+				REGO.CourseType,
+				STF.StaffID,
+				STF.StaffRefNo,
+				STF.Surname,
+				STF.FirstName
+		) MLEC
+			ON MLEC.OfferingGroups = LREG.OfferingGroups
+			AND MLEC.CourseType = LREG.CourseType
+			AND MLEC.RowNum = 1
+		WHERE
+			STF.Username = @Username
+			AND ( CGRP.Code = COALESCE ( @CollegeGroup, CGRP.Code ) OR @CollegeGroup = 'ALL' )
+			AND ( FAC.Code = COALESCE ( @Fac, FAC.Code ) OR @Fac = 'ALL' )
+			AND ( TEAM.Code = COALESCE ( @Team, TEAM.Code ) OR @Team = 'ALL' )
+			AND
+				CASE
+					WHEN @CourseCode IS NOT NULL THEN 
+						CASE
+							WHEN 
+								RIGHT ( REPLACE ( REPLACE ( REG.RegisterNo, ' ', '_' ), '/', '_' ), 19 ) + '-' + LREG.CourseType = @CourseCode
+								THEN 1
+							ELSE 0
+						END
+					WHEN LEN ( @CourseSearch ) + LEN ( @StaffSearch ) > 0 THEN 
+						CASE
+							WHEN 
+								RIGHT ( REPLACE ( REPLACE ( REG.RegisterNo, ' ', '_' ), '/', '_' ), 19 ) + '-' + LREG.CourseType
+								+ ' - ' 
+								+ CASE
+									WHEN CAST ( OneReg.LatestEnd AS DATE ) < CAST ( GetDate() AS DATE ) THEN 'ARCHIVED - '
+									ELSE ''
+								END 
+								+ REG.Title + '-' + LREG.CourseType + ' (' + CAST ( OneReg.NumTotalRegisters AS VARCHAR(8) ) + ')' LIKE '%' + @CourseSearch + '%' 
+								AND 
+									CASE
+										WHEN LEN ( @StaffSearch ) > 0 THEN
+											CASE
+												WHEN LEC.OfferingGroups IS NOT NULL THEN 1
+												ELSE 0
+											END
+										ELSE 1
+									END = 1
+								THEN 1
+							ELSE 0
+						END
+					ELSE
+						CASE
+							WHEN STF.Username = @Username THEN 1
+							ELSE 0
+						END
+				END = 1
+		) CRS
+	GROUP BY
+		CASE
+			WHEN @StructureLevel >= 3 THEN CRS.TeamID
+			WHEN @StructureLevel >= 2 THEN CRS.FacID
+			WHEN @StructureLevel >= 1 THEN CRS.CollegeID
+			ELSE 0
+		END,
+		CASE
+			WHEN @StructureLevel >= 3 THEN CRS.TeamCode
+			WHEN @StructureLevel >= 2 THEN CRS.FacCode
+			WHEN @StructureLevel >= 1 THEN CRS.CollegeCode
+			ELSE NULL
+		END,
+		CASE
+			WHEN @StructureLevel >= 3 THEN CRS.TeamName
+			WHEN @StructureLevel >= 2 THEN CRS.FacName
+			WHEN @StructureLevel >= 1 THEN CRS.CollegeName
+			ELSE NULL
+		END,
+		CASE
+			WHEN @StructureLevel >= 1 THEN CRS.CollegeCode
+			ELSE NULL
+		END,
+		CASE
+			WHEN @StructureLevel >= 1 THEN CRS.CollegeName
+			ELSE NULL
+		END,
+		CASE
+			WHEN @StructureLevel >= 2 THEN CRS.FacCode
+			ELSE NULL
+		END,
+		CASE
+			WHEN @StructureLevel >= 2 THEN CRS.FacName
+			ELSE NULL
+		END,
+		CASE
+			WHEN @StructureLevel >= 3 THEN CRS.TeamCode
+			ELSE NULL
+		END,
+		CASE
+			WHEN @StructureLevel >= 3 THEN CRS.TeamName
+			ELSE NULL
+		END
+	ORDER BY
+		CASE
+			WHEN @StructureLevel >= 3 THEN CRS.TeamCode
+			WHEN @StructureLevel >= 2 THEN CRS.FacCode
+			WHEN @StructureLevel >= 1 THEN CRS.CollegeCode
+			ELSE NULL
+		END
+END
