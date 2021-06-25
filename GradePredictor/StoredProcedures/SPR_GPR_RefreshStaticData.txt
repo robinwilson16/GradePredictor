@@ -3,6 +3,7 @@ CREATE PROCEDURE [dbo].[SPR_GPR_RefreshStaticData]
 AS
 BEGIN
 	SET XACT_ABORT, NOCOUNT ON;
+	SET DATEFORMAT dmy
 
 	DECLARE @Username VARCHAR(100) = 'r.wilson2'
 	DECLARE @CoursesITeach BIT = 0;
@@ -411,7 +412,8 @@ BEGIN
 		ENR.PredictedToAchieveNum,
 		ENR.PredictedToAchievePer,
 		ENR.PredictedToAchieveHighNum,
-		ENR.PredictedToAchieveHighPer
+		ENR.PredictedToAchieveHighPer,
+		ENR.LastUpdated
 		INTO WLC.dbo.GPR_CourseList
 	FROM ProSolution.dbo.Offering CRS
 	INNER JOIN ProSolution.dbo.Site STE
@@ -528,7 +530,8 @@ BEGIN
 								CAST ( COUNT ( SD.StudentDetailID ) AS FLOAT )
 						END,
 						3
-					)
+					),
+			LastUpdated = MAX ( TRY_CAST ( ENR.UserDefined23 AS DATETIME ) )
 		FROM ProSolution.dbo.StudentDetail SD
 		INNER JOIN ProSolution.dbo.Enrolment ENR
 			ON ENR.StudentDetailID = SD.StudentDetailID
@@ -768,7 +771,8 @@ BEGIN
 		ENR.PredictedToAchieveNum,
 		ENR.PredictedToAchievePer,
 		ENR.PredictedToAchieveHighNum,
-		ENR.PredictedToAchieveHighPer
+		ENR.PredictedToAchieveHighPer,
+		ENR.LastUpdated
 	FROM ProSolution.dbo.Register REG
 	INNER JOIN #RegOfferings REGO
 		ON REGO.RegisterID = REG.RegisterID
@@ -903,7 +907,8 @@ BEGIN
 								CAST ( COUNT ( SD.StudentDetailID ) AS FLOAT )
 						END,
 						3
-					)
+					),
+			LastUpdated = MAX ( TRY_CAST ( ENR.UserDefined23 AS DATETIME ) )
 		FROM ProSolution.dbo.StudentDetail SD
 		INNER JOIN ProSolution.dbo.Enrolment ENR
 			ON ENR.StudentDetailID = SD.StudentDetailID

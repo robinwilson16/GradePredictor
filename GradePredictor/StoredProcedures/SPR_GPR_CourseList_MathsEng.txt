@@ -689,7 +689,8 @@ BEGIN
 		ENR.PredictedToAchieveNum,
 		ENR.PredictedToAchievePer,
 		ENR.PredictedToAchieveHighNum,
-		ENR.PredictedToAchieveHighPer
+		ENR.PredictedToAchieveHighPer,
+		ENR.LastUpdated
 	FROM (
 		SELECT
 			STF.StaffID,
@@ -826,7 +827,8 @@ BEGIN
 								CAST ( COUNT ( SD.StudentDetailID ) AS FLOAT )
 						END,
 						3
-					)
+					),
+			LastUpdated = MAX ( TRY_CAST ( ENR.UserDefined23 AS DATETIME ) )
 		FROM ProSolution.dbo.StudentDetail SD
 		INNER JOIN ProSolution.dbo.Enrolment ENR
 			ON ENR.StudentDetailID = SD.StudentDetailID
@@ -1101,7 +1103,8 @@ BEGIN
 		ENR.PredictedToAchieveNum,
 		ENR.PredictedToAchievePer,
 		ENR.PredictedToAchieveHighNum,
-		ENR.PredictedToAchieveHighPer
+		ENR.PredictedToAchieveHighPer,
+		ENR.LastUpdated
 	FROM (
 		SELECT
 			STF.StaffID,
@@ -1260,7 +1263,8 @@ BEGIN
 								CAST ( COUNT ( SD.StudentDetailID ) AS FLOAT )
 						END,
 						3
-					)
+					),
+			LastUpdated = MAX ( TRY_CAST ( ENR.UserDefined23 AS DATETIME ) )
 		FROM ProSolution.dbo.StudentDetail SD
 		INNER JOIN ProSolution.dbo.Enrolment ENR
 			ON ENR.StudentDetailID = SD.StudentDetailID

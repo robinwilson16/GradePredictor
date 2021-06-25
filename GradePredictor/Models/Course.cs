@@ -139,5 +139,10 @@ namespace GradePredictor.Models
         [Display(Name = "Predicted High")]
         [DisplayFormat(DataFormatString = "{0:P1}")]
         public double PredictedToAchieveHighPer { get; set; }
+
+        [Display(Name = "Last Updated")]
+        [DataType(DataType.Date)]
+        [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
+        public DateTime? LastUpdated { get; set; }
     }
 }

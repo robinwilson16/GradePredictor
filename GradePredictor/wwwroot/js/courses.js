@@ -671,6 +671,14 @@ $(function () {
                     display: crsPredictedToAchievePer
                 },
                 className: "text-center achColumn"
+            },
+            {
+                data: {
+                    _: "lastUpdated",
+                    sort: "lastUpdated",
+                    filter: "lastUpdated",
+                    display: crsLastUpdated
+                }
             }
         ],
         //order: [[3, "asc"], [4, "asc"], [2, "asc"]],
@@ -1002,5 +1010,15 @@ function crsPredictedToAchievePer(data, type, dataToSet) {
     else {
         let percent = Number(data.predictedToAchievePer).toLocaleString(undefined, { style: 'percent', minimumFractionDigits: 1 });
         return `${percent}`;
+    }
+}
+
+function crsLastUpdated(data, type, dataToSet) {
+    if (data.lastUpdated === null) {
+        return ``;
+    }
+    else {
+        moment.locale('en-gb');
+        return `${moment(data.lastUpdated).calendar()}`;
     }
 }

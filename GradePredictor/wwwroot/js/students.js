@@ -688,6 +688,15 @@ $(function () {
             },
             {
                 data: {
+                    _: "createdDate",
+                    sort: "createdDate",
+                    filter: "createdDate",
+                    display: stuCreatedDate
+                },
+                className: "text-center"
+            },
+            {
+                data: {
                     _: "comment",
                     sort: "comment",
                     filter: "comment",
@@ -837,6 +846,16 @@ function stuPredictedGrade(data, type, dataToSet) {
         <input list="PredictedGrades-${data.enrolmentID}" class="form-control custom-select PredictedGrade DataToBeSaved" data-content="${data.predictedGrade}" />
         <datalist id="PredictedGrades-${data.enrolmentID}" class="PredictedGradeDatalist" data-content="${data.predictedGrade}">
         </datalist>`;
+}
+
+function stuCreatedDate(data, type, dataToSet) {
+    if (data.createdDate === null) {
+        return ``;
+    }
+    else {
+        moment.locale('en-gb');
+        return `${moment(data.createdDate).calendar()}`;
+    }
 }
 
 function stuComment(data, type, dataToSet) {

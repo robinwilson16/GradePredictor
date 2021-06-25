@@ -75,7 +75,8 @@ BEGIN
 		PredictedToAchieveNum = CRS.PredictedToAchieveNum,
 		PredictedToAchievePer = CRS.PredictedToAchievePer,
 		PredictedToAchieveHighNum = CRS.PredictedToAchieveHighNum,
-		PredictedToAchieveHighPer = CRS.PredictedToAchieveHighPer
+		PredictedToAchieveHighPer = CRS.PredictedToAchieveHighPer,
+		LastUpdated = CRS.LastUpdated
 	FROM GPR_CourseList CRS
 	LEFT JOIN (
 		SELECT
