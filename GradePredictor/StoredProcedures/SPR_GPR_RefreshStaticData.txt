@@ -545,7 +545,13 @@ BEGIN
 			ON POT.WBLPeriodOfTrainingID = ENR.WBLPeriodOfTrainingID
 		WHERE
 			SD.AcademicYearID = @AcademicYear
-			AND ENR.CompletionStatusID = '1'
+			AND (
+				ENR.CompletionStatusID = '1'
+				OR (
+					ENR.CompletionStatusID = '2'
+					AND ENR.OutcomeID = '8'
+				)
+			)
 			AND CAST ( ENR.ExpectedEndDate AS DATE ) <= '20' + RIGHT ( SD.AcademicYearID, 2 ) + '-07-31'
 			AND CAST ( ENR.StartDate AS DATE ) <= GETDATE()
 			AND
@@ -943,7 +949,13 @@ BEGIN
 			ON POT.WBLPeriodOfTrainingID = ENR.WBLPeriodOfTrainingID
 		WHERE
 			SD.AcademicYearID = @AcademicYear
-			AND ENR.CompletionStatusID = '1'
+			AND (
+				ENR.CompletionStatusID = '1'
+				OR (
+					ENR.CompletionStatusID = '2'
+					AND ENR.OutcomeID = '8'
+				)
+			)
 			AND CAST ( ENR.ExpectedEndDate AS DATE ) <= '20' + RIGHT ( SD.AcademicYearID, 2 ) + '-07-31'
 			AND CAST ( ENR.StartDate AS DATE ) <= GETDATE()
 			AND
